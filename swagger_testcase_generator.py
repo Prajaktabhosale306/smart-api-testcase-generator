@@ -3,9 +3,6 @@ import json
 
 
 def load_swagger_from_url(swagger_url):
-    """
-    Loads Swagger/OpenAPI spec from a URL.
-    """
     try:
         response = requests.get(swagger_url)
         response.raise_for_status()
@@ -16,9 +13,6 @@ def load_swagger_from_url(swagger_url):
 
 
 def generate_test_cases(swagger_data):
-    """
-    Parses Swagger data and generates test case data.
-    """
     test_cases = []
     paths = swagger_data.get("paths", {})
 
@@ -30,34 +24,54 @@ def generate_test_cases(swagger_data):
             expected_status = list(responses.keys())[0] if responses else "200"
             payload = {}
 
-            # Handle OpenAPI 3.x - requestBody
-            if "requestBody" in details:
-                content = details["requestBody"].get("content", {})
-                if "application/json" in content:
-                    schema = content["application/json"].get("schema", {})
-                    payload = {"sample": "data"}  # Placeholder, you can improve this
-
-            # Handle Swagger 2 - parameters
+            required_fields = []
             for param in parameters:
-                if param.get("in") in ["query", "body"]:
+                if param.get("in") in ["query", "body"] and param.get("required"):
+                    required_fields.append(param["name"])
                     payload[param["name"]] = f"sample_{param['name']}"
 
-            test_case = {
+            # ---- Positive Test Case ----
+            test_cases.append({
+                "test_case_name": f"{method.upper()} request to {endpoint} should succeed with valid payload",
                 "endpoint": endpoint,
                 "method": method.upper(),
-                "summary": summary,
                 "sample_payload": payload,
-                "expected_status": expected_status
-            }
-            test_cases.append(test_case)
+                "expected_status": expected_status,
+                "test_type": "Positive",
+                "tags": ["positive"]
+            })
+
+            # ---- Negative: Missing Required Field ----
+            for field in required_fields:
+                neg_payload = payload.copy()
+                neg_payload.pop(field, None)
+
+                test_cases.append({
+                    "test_case_name": f"{method.upper()} request to {endpoint} should fail when {field} is missing",
+                    "endpoint": endpoint,
+                    "method": method.upper(),
+                    "sample_payload": neg_payload,
+                    "expected_status": "400",
+                    "test_type": "Negative",
+                    "tags": ["negative", "missing_field", field]
+                })
+
+            # ---- Negative: Unauthorized (if auth is expected, you can customize this) ----
+            if "Authorization" in [p["name"] for p in parameters if p.get("in") == "header"]:
+                test_cases.append({
+                    "test_case_name": f"{method.upper()} request to {endpoint} should fail when token is not provided",
+                    "endpoint": endpoint,
+                    "method": method.upper(),
+                    "sample_payload": payload,
+                    "expected_status": "401",
+                    "test_type": "Negative",
+                    "tags": ["negative", "unauthorized"]
+                })
 
     return test_cases
 
 
 def save_test_cases_to_json(test_cases, filename="generated_test_cases.json"):
-    """
-    Saves generated test cases to a JSON file.
-    """
     with open(filename, "w") as f:
         json.dump(test_cases, f, indent=2)
     print(f"Test cases saved to {filename}")
@@ -71,6 +85,6 @@ if __name__ == "__main__":
         test_cases = generate_test_cases(swagger_data)
         for tc in test_cases:
             print(json.dumps(tc, indent=2))
-            print("-" * 50)
+            print("-" * 60)
 
         save_test_cases_to_json(test_cases)

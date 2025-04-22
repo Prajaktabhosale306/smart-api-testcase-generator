@@ -1,4 +1,4 @@
-from .utils import extract_required_fields
+from utils import extract_required_fields
 
 def generate_test_cases(swagger_data):
     test_cases = []

@@ -1,11 +1,10 @@
 # app/test_generator.py
-
-from utils import extract_required_fields, build_payload_from_schema
+from utils import build_payload_from_schema, extract_required_fields
 
 def generate_test_cases(swagger_data):
     """
-    Walk through each path and method in the Swagger spec,
-    and generate both positive and negative test cases.
+    Generate test cases by analyzing Swagger/OpenAPI paths and methods.
+    This includes both positive and negative test cases.
     """
     tests = []
 
@@ -13,14 +12,14 @@ def generate_test_cases(swagger_data):
         for m, details in methods.items():
             method = m.upper()
 
-            # 1) Determine payload & required fields
+            # 1) Extract request body and generate dynamic payload
             if "requestBody" in details:
-                # OpenAPI 3: requestBody → content → application/json → schema
+                # OpenAPI 3.0: requestBody → content → application/json → schema
                 schema = details["requestBody"]["content"]["application/json"]["schema"]
                 payload = build_payload_from_schema(schema)
                 required_fields = list(payload.keys())
             else:
-                # Swagger 2: parameters list
+                # Swagger 2.0: parameters list
                 required_fields, payload = extract_required_fields(details.get("parameters", []))
 
             # 2) Pick the first response code as expected (e.g., "200")

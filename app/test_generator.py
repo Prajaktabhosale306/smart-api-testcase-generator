@@ -1,66 +1,89 @@
-# app/test_generator.py
-from app.utils import build_payload_from_schema, extract_required_fields
+import random
+import string
+from app.swagger_loader import extract_request_body
+
+def build_dynamic_payload_from_schema(schema):
+    """
+    Builds a dynamic payload based on the JSON schema.
+    For simplicity, we are focusing on basic types and assuming no complex nested structures for now.
+    """
+    payload = {}
+    
+    if not schema:
+        return payload
+    
+    for prop, details in schema.get('properties', {}).items():
+        prop_type = details.get('type')
+        if prop_type == 'string':
+            payload[prop] = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        elif prop_type == 'integer':
+            payload[prop] = random.randint(1, 100)
+        elif prop_type == 'boolean':
+            payload[prop] = random.choice([True, False])
+        elif prop_type == 'array':
+            item_type = details.get('items', {}).get('type', 'string')
+            payload[prop] = [random.choice(string.ascii_letters) for _ in range(3)] if item_type == 'string' else []
+        elif prop_type == 'object':
+            payload[prop] = {}  # Placeholder for nested objects
+    
+    return payload
 
 def generate_test_cases(swagger_data):
     """
-    Generate test cases by analyzing Swagger/OpenAPI paths and methods.
-    This includes both positive and negative test cases.
+    Generates test cases for all endpoints in the Swagger API specification.
     """
-    tests = []
+    test_cases = []
+    paths = swagger_data.get("paths", {})
 
-    for path, methods in swagger_data.get("paths", {}).items():
-        for m, details in methods.items():
-            method = m.upper()
+    for endpoint, methods in paths.items():
+        for method, details in methods.items():
+            summary = details.get("summary", "")
+            parameters = details.get("parameters", [])
+            responses = details.get("responses", {})
+            expected_status = list(responses.keys())[0] if responses else "200"
 
-            # 1) Extract request body and generate dynamic payload
-            if "requestBody" in details:
-                # OpenAPI 3.0: requestBody → content → application/json → schema
-                schema = details["requestBody"]["content"]["application/json"]["schema"]
-                payload = build_payload_from_schema(schema)
-                required_fields = list(payload.keys())
-            else:
-                # Swagger 2.0: parameters list
-                required_fields, payload = extract_required_fields(details.get("parameters", []))
+            # Extract dynamic payload from requestBody schema
+            request_body_schema = extract_request_body(details)
+            dynamic_payload = build_dynamic_payload_from_schema(request_body_schema)
 
-            # 2) Pick the first response code as expected (e.g., "200")
-            expected = next(iter(details.get("responses", {"200": {}})))
-
-            # 3) Positive test case
-            tests.append({
-                "test_case_name": f"{method} {path} succeeds with valid payload",
-                "endpoint": path,
-                "method": method,
-                "sample_payload": payload,
-                "expected_status": expected,
+            # ---- Positive Test Case ----
+            test_cases.append({
+                "test_case_name": f"{method.upper()} request to {endpoint} should succeed with valid payload",
+                "endpoint": endpoint,
+                "method": method.upper(),
+                "sample_payload": dynamic_payload,
+                "expected_status": expected_status,
                 "test_type": "Positive",
                 "tags": ["positive"]
             })
 
-            # 4) Negative: missing each required field
-            for f in required_fields:
-                neg = payload.copy()
-                neg.pop(f, None)
-                tests.append({
-                    "test_case_name": f"{method} {path} fails when '{f}' missing",
-                    "endpoint": path,
-                    "method": method,
-                    "sample_payload": neg,
+            # ---- Negative: Missing Required Field ----
+            required_fields = [param['name'] for param in parameters if param.get("required")]
+            for field in required_fields:
+                neg_payload = dynamic_payload.copy()
+                neg_payload.pop(field, None)
+
+                test_cases.append({
+                    "test_case_name": f"{method.upper()} request to {endpoint} should fail when {field} is missing",
+                    "endpoint": endpoint,
+                    "method": method.upper(),
+                    "sample_payload": neg_payload,
                     "expected_status": "400",
                     "test_type": "Negative",
-                    "tags": ["negative", "missing_field", f]
+                    "tags": ["negative", "missing_field", field]
                 })
 
-            # 5) Unauthorized if an Authorization header is defined
-            params = details.get("parameters", [])
-            if any(p.get("in") == "header" and p.get("name") == "Authorization" for p in params):
-                tests.append({
-                    "test_case_name": f"{method} {path} fails when token missing",
-                    "endpoint": path,
-                    "method": method,
-                    "sample_payload": payload,
+            # ---- Negative: Unauthorized ----
+            if "Authorization" in [param["name"] for param in parameters if param.get("in") == "header"]:
+                test_cases.append({
+                    "test_case_name": f"{method.upper()} request to {endpoint} should fail when token is not provided",
+                    "endpoint": endpoint,
+                    "method": method.upper(),
+                    "sample_payload": dynamic_payload,
                     "expected_status": "401",
                     "test_type": "Negative",
                     "tags": ["negative", "unauthorized"]
                 })
 
-    return tests
+    return test_cases
+

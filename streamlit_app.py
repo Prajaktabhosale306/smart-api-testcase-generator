@@ -5,7 +5,7 @@ import pandas as pd
 import json
 
 # Add 'app' directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
+app/sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
 
 from swagger_loader import load_swagger_from_url
 from test_generator import generate_test_cases

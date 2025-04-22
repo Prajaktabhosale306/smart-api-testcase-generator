@@ -1,55 +1,55 @@
-# app/utils.py
-import random
+import json
+import csv
 
-def fake_string():
-    """Generate a dummy string value."""
-    return "sampleText"
-
-def fake_integer():
-    """Generate a dummy integer value."""
-    return random.randint(1, 100)
-
-def fake_boolean():
-    """Generate a dummy boolean value."""
-    return random.choice([True, False])
-
-def fake_array(item_schema):
+def save_test_cases_to_json(test_cases, filename="generated_test_cases.json"):
     """
-    Generate a dummy array for simple schemas.
-    Supports arrays of primitives: string, integer, boolean.
+    Save the generated test cases to a JSON file.
     """
-    t = item_schema.get("type")
-    if t == "string":
-        return [fake_string()]
-    if t == "integer":
-        return [fake_integer()]
-    if t == "boolean":
-        return [fake_boolean()]
-    return []
+    try:
+        with open(filename, 'w') as json_file:
+            json.dump(test_cases, json_file, indent=2)
+        print(f"Test cases successfully saved to {filename}")
+    except Exception as e:
+        print(f"Error saving to JSON: {e}")
+
+def save_test_cases_to_csv(test_cases, filename="generated_test_cases.csv"):
+    """
+    Save the generated test cases to a CSV file.
+    """
+    try:
+        with open(filename, 'w', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=test_cases[0].keys())
+            writer.writeheader()
+            writer.writerows(test_cases)
+        print(f"Test cases successfully saved to {filename}")
+    except Exception as e:
+        print(f"Error saving to CSV: {e}")
+
+def extract_required_fields(parameters):
+    """
+    Extract the required fields from a list of parameters.
+    """
+    required_fields = [param['name'] for param in parameters if param.get('required')]
+    return required_fields
 
 def build_payload_from_schema(schema):
     """
-    Given an OpenAPI 3 JSON schema, build a sample payload dict:
-      - Only include required properties
-      - Generate dummy data matching each property’s type
+    Build a sample payload from the provided schema.
+    This is a helper function used for generating dynamic request bodies.
     """
-    props = schema.get("properties", {})
-    required = schema.get("required", [])
     payload = {}
-    
-    # Generate dummy values for the required properties
-    for name, sub in props.items():
-        if name not in required:
-            continue  # only required fields for now
-        t = sub.get("type")
-        if t == "string":
-            payload[name] = fake_string()
-        elif t == "integer":
-            payload[name] = fake_integer()
-        elif t == "boolean":
-            payload[name] = fake_boolean()
-        elif t == "array":
-            payload[name] = fake_array(sub.get("items", {}))
-        else:
-            payload[name] = None  # fallback for complex types
+    if 'properties' in schema:
+        for prop, details in schema['properties'].items():
+            prop_type = details.get('type')
+            if prop_type == 'string':
+                payload[prop] = "sample_string_value"
+            elif prop_type == 'integer':
+                payload[prop] = 123
+            elif prop_type == 'boolean':
+                payload[prop] = True
+            elif prop_type == 'array':
+                item_type = details.get('items', {}).get('type', 'string')
+                payload[prop] = ["item1", "item2"] if item_type == 'string' else []
+            elif prop_type == 'object':
+                payload[prop] = {}  # Placeholder for nested objects
     return payload

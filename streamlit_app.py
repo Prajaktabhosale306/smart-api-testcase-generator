@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
 
 from swagger_loader import load_swagger_from_url
 from test_generator import generate_test_cases
+from app.utils import extract_required_fields
 
 # Streamlit page configuration
 st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")

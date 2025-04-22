@@ -25,11 +25,11 @@ def save_test_cases_to_csv(test_cases, filename="generated_test_cases.csv"):
     except Exception as e:
         print(f"Error saving to CSV: {e}")
 
-def extract_required_fields(parameters):
-    """
-    Extract the required fields from a list of parameters.
-    """
-    required_fields = [param['name'] for param in parameters if param.get('required')]
+def extract_required_fields(schema):
+    """Extracts the required fields from the given schema."""
+    required_fields = []
+    if "required" in schema:
+        required_fields = schema["required"]
     return required_fields
 
 def build_payload_from_schema(schema):

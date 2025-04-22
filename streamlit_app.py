@@ -1,48 +1,37 @@
-import os
+# streamlit_app.py
+
 import sys
-import json
+import os
 import streamlit as st
-import pandas as pd
+import json
 
-# Ensure app modules are importable
-sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
+# Add 'app' directory to the Python path to import from the app package
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
 
-from swagger_loader import load_swagger_from_url
+from swagger_loader import load_swagger_from_url, extract_request_body
 from test_generator import generate_test_cases
-from app.utils import extract_required_fields
+from utils import save_test_cases_to_json, save_test_cases_to_csv
 
 # Streamlit page configuration
 st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")
 
-# App title & description
-st.title("🚀 Smart API Test Case Generator")
-st.markdown("Enter a **Swagger/OpenAPI** URL to auto-generate test cases (positive & negative).")
+# File uploader for Swagger JSON
+uploaded_file = st.file_uploader("Upload Swagger JSON", type="json")
 
-# Input field for Swagger URL
-swagger_url = st.text_input("Swagger/OpenAPI URL", placeholder="https://example.com/swagger.json")
+if uploaded_file:
+    # Load the Swagger data
+    swagger_data = json.loads(uploaded_file.getvalue().decode("utf-8"))
 
-# On button click, generate and display test cases
-if st.button("Generate Test Cases"):
-    if not swagger_url:
-        st.warning("Please enter a valid Swagger URL.")
-    else:
-        # Load and parse spec
-        swagger_data = load_swagger_from_url(swagger_url)
-        if not swagger_data:
-            st.error("Failed to load Swagger file.")
-        else:
-            # Generate tests
-            test_cases = generate_test_cases(swagger_data)
-            st.success(f"✅ Generated {len(test_cases)} test cases.")
+    # Generate test cases based on the Swagger data
+    test_cases = generate_test_cases(swagger_data)
 
-            # Display in a DataFrame
-            df = pd.DataFrame(test_cases)
-            st.dataframe(df, use_container_width=True)
+    # Display generated test cases
+    st.write(f"Generated {len(test_cases)} test cases:")
+    st.json(test_cases)
 
-            # JSON download
-            json_bytes = json.dumps(test_cases, indent=2).encode("utf-8")
-            st.download_button("📥 Download JSON", data=json_bytes, file_name="test_cases.json", mime="application/json")
+    # Provide options to download test cases as JSON or CSV
+    if st.button('Download as JSON'):
+        save_test_cases_to_json(test_cases)
 
-            # CSV download
-            csv_str = df.to_csv(index=False)
-            st.download_button("📥 Download CSV", data=csv_str, file_name="test_cases.csv", mime="text/csv")
+    if st.button('Download as CSV'):
+        save_test_cases_to_csv(test_cases)

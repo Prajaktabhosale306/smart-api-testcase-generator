@@ -3,6 +3,14 @@ from app.swagger_loader import load_swagger_from_url
 from app.test_generator import generate_test_cases
 from app.utils import save_test_cases_to_json
 import json
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+
+from utils import save_test_cases_to_json
+from swagger_loader import load_swagger_from_url
+from test_generator import generate_test_cases
+
 
 st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")
 

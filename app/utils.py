@@ -1,24 +1,6 @@
 # app/utils.py
 import random
 
-def extract_required_fields(parameters):
-    """
-    From a list of Swagger 2 parameters, find those that are:
-      - required
-      - in query or body
-    Returns:
-      - required_fields: list of parameter names
-      - payload: dict mapping each required field to a dummy value
-    """
-    required_fields = []
-    payload = {}
-    for p in parameters:
-        if p.get("required") and p.get("in") in ["query", "body"]:
-            name = p["name"]
-            required_fields.append(name)
-            payload[name] = f"sample_{name}"
-    return required_fields, payload
-
 def fake_string():
     """Generate a dummy string value."""
     return "sampleText"
@@ -54,6 +36,8 @@ def build_payload_from_schema(schema):
     props = schema.get("properties", {})
     required = schema.get("required", [])
     payload = {}
+    
+    # Generate dummy values for the required properties
     for name, sub in props.items():
         if name not in required:
             continue  # only required fields for now

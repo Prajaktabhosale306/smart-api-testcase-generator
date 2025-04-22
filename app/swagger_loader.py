@@ -1,25 +1,21 @@
+# app/swagger_loader.py
+
 import requests
-import json
 
-def load_swagger_from_url(swagger_url):
-    """
-    Fetches Swagger/OpenAPI JSON from the provided URL.
-    """
-    try:
-        response = requests.get(swagger_url)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"Failed to load Swagger file: {e}")
-        return None
+def load_swagger_from_url(url):
+    """ Load Swagger data from a URL """
+    response = requests.get(url)
+    return response.json()
 
-def extract_request_body(endpoint_data):
-    """
-    Extracts the request body schema from the Swagger definition of an endpoint.
-    """
-    request_body = endpoint_data.get('requestBody', {})
-    if 'content' in request_body:
-        json_schema = request_body['content'].get('application/json', {})
-        return json_schema.get('schema', {})
-    return {}
-
+def extract_request_body(swagger_data):
+    """ Extract request body from Swagger data """
+    request_bodies = {}
+    
+    # Loop through all paths in the Swagger spec to find request bodies
+    paths = swagger_data.get("paths", {})
+    for path, methods in paths.items():
+        for method, method_info in methods.items():
+            if "requestBody" in method_info:
+                request_bodies[path] = method_info["requestBody"]
+    
+    return request_bodies

@@ -13,6 +13,11 @@ def generate_test_cases(swagger_data):
     for path, methods in paths.items():
         for method, details in methods.items():
             schema = extract_request_body_schema(details)
+
+            # 🔍 DEBUG: Log schema to Streamlit logs
+            print(f"🔎 [{method.upper()}] {path} -> schema:")
+            print(schema)
+
             payload = build_payload_from_schema(schema)
             required_fields = extract_required_fields(schema)
 

@@ -6,9 +6,10 @@ def generate_test_cases(swagger_data):
     paths = swagger_data.get("paths", {})
     for path, methods in paths.items():
         for method, details in methods.items():
-            payload_schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
-            payload = build_payload_from_schema(payload_schema)
-            required_fields = extract_required_fields(payload_schema)
+            parameters = details.get("parameters", [])
+            schema = extract_body_schema_from_parameters(parameters)
+            payload = build_payload_from_schema(schema)
+            required_fields = extract_required_fields(schema)
 
             test_case = {
                 "endpoint": path,
@@ -20,3 +21,12 @@ def generate_test_cases(swagger_data):
             test_cases.append(test_case)
 
     return test_cases
+
+def extract_body_schema_from_parameters(parameters):
+    """
+    Extracts schema from Swagger 2.0 style body parameters
+    """
+    for param in parameters:
+        if param.get("in") == "body" and "schema" in param:
+            return param["schema"]
+    return {}

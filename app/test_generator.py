@@ -1,4 +1,4 @@
-from utils import build_payload_from_schema, extract_required_fields
+from app.utils import build_payload_from_schema, extract_required_fields
 
 def extract_request_body_schema(details):
     """

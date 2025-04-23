@@ -8,18 +8,26 @@ def build_payload_from_schema(schema):
         return {}
 
     payload = {}
-    for key, value in schema.get("properties", {}).items():
-        data_type = value.get("type")
+    for key, value in schema["properties"].items():
+        t = value.get("type")
 
-        if data_type == "string":
-            payload[key] = ''.join(random.choices(string.ascii_letters, k=8))
-        elif data_type == "integer":
-            payload[key] = random.randint(1, 100)
-        elif data_type == "boolean":
-            payload[key] = random.choice([True, False])
+        if t == "string":
+            payload[key] = "example_string"
+        elif t == "integer":
+            payload[key] = 123
+        elif t == "boolean":
+            payload[key] = True
+        elif t == "array":
+            item_type = value.get("items", {}).get("type", "string")
+            if item_type == "string":
+                payload[key] = ["item1", "item2"]
+            else:
+                payload[key] = []
         else:
             payload[key] = None
+
     return payload
+
 
 def extract_required_fields(schema):
     return schema.get("required", [])

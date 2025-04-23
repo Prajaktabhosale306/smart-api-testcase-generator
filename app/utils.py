@@ -18,4 +18,5 @@ def build_payload_from_schema(schema):
     return payload
 
 def extract_required_fields(schema):
+    """Extract required field names from the OpenAPI schema."""
     return schema.get("required", [])

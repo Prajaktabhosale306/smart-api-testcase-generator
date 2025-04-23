@@ -1,4 +1,4 @@
-from utils import build_payload_from_schema, extract_required_fields
+from app.utils import build_payload_from_schema, extract_required_fields
 
 def generate_test_cases(swagger_data):
     test_cases = []

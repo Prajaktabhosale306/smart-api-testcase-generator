@@ -1,5 +1,11 @@
 from app.utils import build_payload_from_schema, extract_required_fields
 
+def extract_request_body_schema(details):
+    """
+    Extracts JSON schema from requestBody (OpenAPI 3.0 style).
+    """
+    return details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+
 def generate_test_cases(swagger_data):
     test_cases = []
 

@@ -1,18 +1,21 @@
 from app.utils import build_payload_from_schema, extract_required_fields
 
 def extract_body_schema(details):
-    """
-    Works with both Swagger 2.0 (parameters) and OpenAPI 3.0 (requestBody).
-    """
-    # ✅ OpenAPI 3.0 style
+    """Support Swagger 2.0 and OpenAPI 3.0"""
+    # OpenAPI 3.0
     if "requestBody" in details:
-        return details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+        schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+        print("🔍 OpenAPI schema found:", schema)
+        return schema
 
-    # ✅ Swagger 2.0 style
+    # Swagger 2.0
     for param in details.get("parameters", []):
         if param.get("in") == "body" and "schema" in param:
-            return param["schema"]
+            schema = param["schema"]
+            print("🐶 Swagger 2.0 schema found:", schema)
+            return schema
 
+    print("⚠️ No schema found in:", details.get("parameters", []))
     return {}
 
 def generate_test_cases(swagger_data):

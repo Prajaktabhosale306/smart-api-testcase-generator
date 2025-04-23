@@ -1,20 +1,22 @@
-# app/test_generator.py
-
-from utils import build_payload_from_schema
-from swagger_loader import extract_request_body
+from utils import build_payload_from_schema, extract_required_fields
 
 def generate_test_cases(swagger_data):
     test_cases = []
-    
-    # Extract request bodies from the Swagger data
-    request_bodies = extract_request_body(swagger_data)
-    
-    for path, request_body in request_bodies.items():
-        # Example logic for generating test cases based on the request body
-        test_case = {
-            "path": path,
-            "request_body": build_payload_from_schema(request_body)
-        }
-        test_cases.append(test_case)
-    
+
+    paths = swagger_data.get("paths", {})
+    for path, methods in paths.items():
+        for method, details in methods.items():
+            payload_schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+            payload = build_payload_from_schema(payload_schema)
+            required_fields = extract_required_fields(payload_schema)
+
+            test_case = {
+                "endpoint": path,
+                "method": method.upper(),
+                "description": details.get("summary", ""),
+                "payload": payload,
+                "required_fields": required_fields,
+            }
+            test_cases.append(test_case)
+
     return test_cases

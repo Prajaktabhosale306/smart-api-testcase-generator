@@ -1,18 +1,14 @@
-import sys
-import os
 import streamlit as st
+import json
 
-# Add 'app' directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
-
-from swagger_loader import load_swagger_from_url, extract_request_body
-from test_generator import generate_test_cases
+# Absolute imports from the app package
+from app.swagger_loader import load_swagger_from_url, extract_request_body
+from app.test_generator import generate_test_cases
 from app.utils import save_test_cases_to_json, save_test_cases_to_csv
 
 st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")
 
 st.title("Smart API Test Case Generator")
-
 url = st.text_input("Enter Swagger/OpenAPI URL:")
 
 if st.button("Generate Test Cases") and url:
@@ -21,5 +17,6 @@ if st.button("Generate Test Cases") and url:
 
     st.success(f"{len(test_cases)} test cases generated!")
 
-    if st.download_button("Download JSON", str(test_cases), file_name="test_cases.json"):
-        st.success("JSON downloaded!")
+    st.json(test_cases)
+
+    st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", "application/json")

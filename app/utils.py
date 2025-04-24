@@ -4,20 +4,47 @@ import json
 import csv
 
 
-def build_payload_from_schema(schema):
+def resolve_ref(schema, swagger_data):
     """
-    Build a dynamic payload from an OpenAPI schema, including array root-level support.
+    Resolves a $ref like '#/components/schemas/User' from within the schema.
+    """
+    if not isinstance(schema, dict) or "$ref" not in schema:
+        return schema
+
+    ref_path = schema["$ref"].strip("#/").split("/")
+    resolved = swagger_data
+    for part in ref_path:
+        resolved = resolved.get(part, {})
+    return resolved
+
+
+def build_payload_from_schema(schema, swagger_data=None):
+    """
+    Build a dynamic payload from an OpenAPI schema, including support for:
+    - root-level arrays
+    - nested objects
+    - $ref resolution (if swagger_data is provided)
     """
     if not schema:
         return {}
 
     schema_type = schema.get('type', 'object')
 
-    # Handle root-level array schema
+    # 🔁 Resolve $ref at root level
+    if "$ref" in schema and swagger_data:
+        schema = resolve_ref(schema, swagger_data)
+        schema_type = schema.get("type", "object")
+
+    # 📦 Handle root-level array
     if schema_type == "array":
         item_schema = schema.get("items", {})
-        return [build_payload_from_schema(item_schema)]
 
+        if "$ref" in item_schema and swagger_data:
+            item_schema = resolve_ref(item_schema, swagger_data)
+
+        return [build_payload_from_schema(item_schema, swagger_data)]
+
+    # 🧩 Handle object properties
     if schema_type != 'object' or 'properties' not in schema:
         return {}
 

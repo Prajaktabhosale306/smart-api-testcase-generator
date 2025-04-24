@@ -1,31 +1,37 @@
 from app.utils import build_payload_from_schema, extract_required_fields
 
-def resolve_ref(ref, swagger_data):
+def resolve_ref(schema, swagger_data):
     """
-    Resolve a $ref like '#/components/schemas/Pet' into the actual schema object.
+    Resolves a JSON reference ($ref) to the actual schema object.
     """
-    parts = ref.strip("#/").split("/")
+    if not isinstance(schema, dict) or "$ref" not in schema:
+        return schema
+
+    ref_path = schema["$ref"].strip("#/").split("/")
     resolved = swagger_data
-    for part in parts:
+    for part in ref_path:
         resolved = resolved.get(part, {})
     return resolved
 
 def extract_request_body_schema(details, swagger_data):
     """
-    Extract requestBody schema, including resolving $ref if present.
+    Extracts and resolves the request body schema from OpenAPI 3.0.
     """
     schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
-    if "$ref" in schema:
-        schema = resolve_ref(schema["$ref"], swagger_data)
-    return schema
+    return resolve_ref(schema, swagger_data)
 
 def generate_test_cases(swagger_data):
     test_cases = []
-
     paths = swagger_data.get("paths", {})
+
     for path, methods in paths.items():
         for method, details in methods.items():
             schema = extract_request_body_schema(details, swagger_data)
+
+            # 👇 Add debug print
+            print(f"✅ [{method.upper()}] {path} schema:")
+            print(schema)
+
             payload = build_payload_from_schema(schema)
             required_fields = extract_required_fields(schema)
 

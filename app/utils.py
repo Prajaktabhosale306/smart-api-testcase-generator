@@ -20,9 +20,10 @@ def resolve_ref(schema, swagger_data):
 
 def build_payload_from_schema(schema, swagger_data=None):
     """
-    Build a dynamic payload from an OpenAPI schema, including support for:
-    - root-level arrays
-    - nested objects
+    Build a dynamic payload from an OpenAPI schema, including:
+    - root-level objects
+    - arrays of objects
+    - nested structures
     - $ref resolution (if swagger_data is provided)
     """
     if not schema:
@@ -30,21 +31,22 @@ def build_payload_from_schema(schema, swagger_data=None):
 
     schema_type = schema.get('type', 'object')
 
-    # 🔁 Resolve $ref at root level
+    # 🔁 Resolve root $ref
     if "$ref" in schema and swagger_data:
         schema = resolve_ref(schema, swagger_data)
         schema_type = schema.get("type", "object")
 
-    # 📦 Handle root-level array
+    # 🧩 Array at root
     if schema_type == "array":
         item_schema = schema.get("items", {})
 
+        # ✅ Resolve $ref inside array item
         if "$ref" in item_schema and swagger_data:
             item_schema = resolve_ref(item_schema, swagger_data)
 
         return [build_payload_from_schema(item_schema, swagger_data)]
 
-    # 🧩 Handle object properties
+    # 🧩 Object schema
     if schema_type != 'object' or 'properties' not in schema:
         return {}
 
@@ -73,6 +75,10 @@ def extract_required_fields(schema):
     """
     Extracts required field names from an OpenAPI object schema.
     """
+    if "$ref" in schema:
+        # fallback if $ref passed instead of resolved schema
+        return []
+
     return schema.get("required", [])
 
 

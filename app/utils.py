@@ -54,6 +54,11 @@ def build_payload_from_schema(schema, swagger_data=None):
     for prop, prop_schema in schema['properties'].items():
         prop_type = prop_schema.get("type", "string")
 
+        # ✅ Resolve $ref inside property schema
+        if "$ref" in prop_schema and swagger_data:
+            prop_schema = resolve_ref(prop_schema, swagger_data)
+            prop_type = prop_schema.get("type", "string")
+
         if prop_type == "string":
             payload[prop] = "example_string"
         elif prop_type == "integer":

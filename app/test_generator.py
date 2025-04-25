@@ -28,11 +28,12 @@ def generate_test_cases(swagger_data):
         for method, details in methods.items():
             schema = extract_request_body_schema(details, swagger_data)
 
-            # 👇 Add debug print
+            # 👇 Debug print
             print(f"✅ [{method.upper()}] {path} schema:")
             print(schema)
 
-            payload = build_payload_from_schema(schema)
+            # ✅ Pass swagger_data to resolve nested $ref properly
+            payload = build_payload_from_schema(schema, swagger_data)
             required_fields = extract_required_fields(schema)
 
             test_case = {

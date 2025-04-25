@@ -1,8 +1,5 @@
-import random
-import string
 import json
 import csv
-
 
 def resolve_ref(schema, swagger_data):
     """
@@ -23,41 +20,40 @@ def build_payload_from_schema(schema, swagger_data=None):
     Build a dynamic payload from an OpenAPI schema, including:
     - root-level objects
     - arrays of objects
-    - nested structures
-    - $ref resolution (if swagger_data is provided)
+    - nested $ref resolution
     """
     if not schema:
         return {}
 
-    schema_type = schema.get('type', 'object')
+    schema_type = schema.get("type", "object")
 
-    # 🔁 Resolve root $ref
+    # 🔁 Resolve top-level $ref
     if "$ref" in schema and swagger_data:
         schema = resolve_ref(schema, swagger_data)
         schema_type = schema.get("type", "object")
 
-    # 🧩 Array at root
+    # 📦 Handle arrays
     if schema_type == "array":
         item_schema = schema.get("items", {})
 
-        # ✅ Resolve $ref inside array item
+        # Resolve $ref in array item
         if "$ref" in item_schema and swagger_data:
             item_schema = resolve_ref(item_schema, swagger_data)
 
         return [build_payload_from_schema(item_schema, swagger_data)]
 
-    # 🧩 Object schema
-    if schema_type != 'object' or 'properties' not in schema:
+    # 📦 Handle objects
+    if schema_type != "object" or "properties" not in schema:
         return {}
 
     payload = {}
-    for prop, prop_schema in schema['properties'].items():
+    for prop, prop_schema in schema["properties"].items():
         prop_type = prop_schema.get("type", "string")
 
-        # ✅ Resolve $ref inside property schema
+        # Resolve nested $ref
         if "$ref" in prop_schema and swagger_data:
             prop_schema = resolve_ref(prop_schema, swagger_data)
-            prop_type = prop_schema.get("type", "string")
+            prop_type = prop_schema.get("type", "object")
 
         if prop_type == "string":
             payload[prop] = "example_string"
@@ -66,10 +62,15 @@ def build_payload_from_schema(schema, swagger_data=None):
         elif prop_type == "boolean":
             payload[prop] = True
         elif prop_type == "array":
-            item_type = prop_schema.get("items", {}).get("type", "string")
-            payload[prop] = ["item1", "item2"] if item_type == "string" else [1, 2]
+            item_schema = prop_schema.get("items", {})
+
+            # Resolve $ref in array item
+            if "$ref" in item_schema and swagger_data:
+                item_schema = resolve_ref(item_schema, swagger_data)
+
+            payload[prop] = [build_payload_from_schema(item_schema, swagger_data)]
         elif prop_type == "object":
-            payload[prop] = {"example": "nested"}
+            payload[prop] = build_payload_from_schema(prop_schema, swagger_data)
         else:
             payload[prop] = None
 
@@ -81,9 +82,8 @@ def extract_required_fields(schema):
     Extracts required field names from an OpenAPI object schema.
     """
     if "$ref" in schema:
-        # fallback if $ref passed instead of resolved schema
+        # Optional: you could resolve it here too
         return []
-
     return schema.get("required", [])
 
 

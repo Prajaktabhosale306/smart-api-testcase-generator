@@ -1,14 +1,15 @@
 import requests
 
 def load_swagger_from_url(url):
+    # Fetch the Swagger specification from the URL
     response = requests.get(url)
     response.raise_for_status()
     swagger_data = response.json()
 
-    # Debugging: Print the structure of the returned data
+    # Debugging: Print the first few items of the swagger data to analyze structure
     print("Swagger Data:", swagger_data)
 
-    # Check for Swagger 2.0 or OpenAPI 3.0
+    # Check for Swagger 2.0 or OpenAPI 3.0 based on the keys present
     if 'swagger' in swagger_data:  # Swagger 2.0
         print("Swagger 2.0 detected.")
         if 'paths' not in swagger_data:
@@ -24,7 +25,7 @@ def load_swagger_from_url(url):
 
 def extract_request_body(path_data):
     try:
-        # OpenAPI 3.0 and Swagger 2.0 have slightly different formats
+        # Handle OpenAPI 3.0 and Swagger 2.0 request body formats
         if 'requestBody' in path_data:  # OpenAPI 3.0
             return path_data['requestBody']['content']['application/json']['schema']
         elif 'parameters' in path_data:  # Swagger 2.0

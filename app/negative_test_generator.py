@@ -11,30 +11,30 @@ class NegativeTestGenerator:
         self.swagger_data = swagger_data
         self.generated_tests = set()  # Initialize the set to keep track of generated tests
 
-    def generate_negative_tests_for_endpoint(self, endpoint, method_details):
-        """
-        Generate negative test cases for a given endpoint and method.
-        Ensure no duplicate tests for the same endpoint and method.
-        """
-        negative_tests = []
-        # Avoid duplicate tests for the same method and endpoint
-        test_case_key = (endpoint, method)  # Use method directly, not from method_details
+   def generate_negative_tests_for_endpoint(self, endpoint, method_details, method):
+    """
+    Generate negative test cases for a given endpoint and method.
+    Ensure no duplicate tests for the same endpoint and method.
+    """
+    negative_tests = []
+    # Avoid duplicate tests for the same method and endpoint
+    test_case_key = (endpoint, method)  # Use method directly, not from method_details
 
-        if test_case_key not in self.generated_tests:
-            self.generated_tests.add(test_case_key)
+    if test_case_key not in self.generated_tests:
+        self.generated_tests.add(test_case_key)
 
-            # Generate tests for this endpoint-method pair
-            print(f"Generating tests for {test_case_key}")
-            missing_field_tests = self._missing_required_fields(endpoint, method_details)
-            wrong_data_type_tests = self._wrong_data_types(endpoint, method_details)
+        # Generate tests for this endpoint-method pair
+        print(f"Generating tests for {test_case_key}")
+        missing_field_tests = self._missing_required_fields(endpoint, method_details)
+        wrong_data_type_tests = self._wrong_data_types(endpoint, method_details)
 
-            # Collect generated tests
-            if missing_field_tests:
-                negative_tests.extend(missing_field_tests)
-            if wrong_data_type_tests:
-                negative_tests.extend(wrong_data_type_tests)
+        # Collect generated tests
+        if missing_field_tests:
+            negative_tests.extend(missing_field_tests)
+        if wrong_data_type_tests:
+            negative_tests.extend(wrong_data_type_tests)
 
-        return negative_tests
+    return negative_tests
 
     def _missing_required_fields(self, endpoint, method_details):
         """

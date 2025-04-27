@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import requests
 from app.swagger_loader import SwaggerLoader
+from app.swagger_loader import load_swagger
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
 

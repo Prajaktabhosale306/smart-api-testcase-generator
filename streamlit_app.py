@@ -8,17 +8,29 @@ from app.negative_test_generator import NegativeTestGenerator
 def main():
     st.title("Smart API Test Case Generator 🚀")
 
-    uploaded_file = st.file_uploader("Upload Swagger/OpenAPI JSON file", type=["json"])
-    swagger_url = st.text_input("Or enter Swagger/OpenAPI URL")
+    st.subheader("Choose Input Method:")
+    input_method = st.radio(
+        "Select how you want to provide the Swagger/OpenAPI file:",
+        ("Upload JSON File", "Enter URL")
+    )
 
-    if uploaded_file or swagger_url:
+    swagger_data = None
+
+    if input_method == "Upload JSON File":
+        uploaded_file = st.file_uploader("Upload Swagger/OpenAPI JSON file", type=["json"])
         if uploaded_file:
             try:
                 swagger_data = json.load(uploaded_file)
             except Exception as e:
                 st.error(f"Error reading JSON file: {e}")
                 return
-        else:
+
+    elif input_method == "Enter URL":
+        swagger_url = st.text_input("Enter Swagger/OpenAPI URL (must start with http:// or https://)")
+        if swagger_url:
+            if not (swagger_url.startswith("http://") or swagger_url.startswith("https://")):
+                st.error("Please enter a valid URL starting with http:// or https://")
+                return
             try:
                 response = requests.get(swagger_url)
                 response.raise_for_status()
@@ -30,6 +42,7 @@ def main():
                 st.error("Invalid JSON response from URL.")
                 return
 
+    if swagger_data:
         loader = SwaggerLoader(swagger_data)
         generator = TestGenerator(loader)
         negative_generator = NegativeTestGenerator(loader)

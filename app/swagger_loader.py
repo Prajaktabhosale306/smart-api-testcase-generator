@@ -24,7 +24,7 @@ def load_swagger_from_url(url):
     # Print the raw Swagger data to debug
     print("Raw Swagger Data:", swagger_data)
     
-    # Ensure 'swagger' and 'paths' exist in the Swagger specification
+    # Ensure 'swagger' or 'openapi' key exists in the Swagger specification
     if not isinstance(swagger_data, dict):
         raise ValueError("The Swagger data is not in the expected dictionary format.")
     
@@ -32,11 +32,11 @@ def load_swagger_from_url(url):
     if 'swagger' in swagger_data:
         print("Swagger 2.0 Format Detected.")
         if 'paths' not in swagger_data:
-            raise ValueError("'paths' key not found in the Swagger 2.0 specification.")
+            print("The 'paths' key is missing in the Swagger 2.0 specification.")
     elif 'openapi' in swagger_data:
         print("OpenAPI 3.0 Format Detected.")
         if 'paths' not in swagger_data:
-            raise ValueError("'paths' key not found in the OpenAPI 3.0 specification.")
+            print("The 'paths' key is missing in the OpenAPI 3.0 specification.")
     else:
         raise ValueError("The Swagger data does not contain a valid 'swagger' or 'openapi' key.")
     

@@ -1,49 +1,47 @@
-import streamlit as st
-import json
 import requests
-from app.swagger_loader import SwaggerLoader  # Import the class, not the function
-from app.test_generator import generate_test_cases
-from app.utils import save_test_cases_to_json, save_test_cases_to_csv
+import json
 
-# Streamlit page configuration (must be the first command in the script)
-st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")
+class SwaggerLoader:
+    def __init__(self):
+        pass
 
-# App title
-st.title("Smart API Test Case Generator")
+    def load_swagger_from_url(self, url):
+        """Load Swagger data from a URL and handle common errors."""
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Raise error for bad responses (4xx or 5xx)
+            
+            # Try to parse the JSON from the response
+            swagger_data = response.json()
 
-# Input for Swagger/OpenAPI URL
-url = st.text_input("Enter Swagger/OpenAPI URL:")
+            # Debugging: print the raw Swagger data to the console
+            print("Raw Swagger Data:", json.dumps(swagger_data, indent=2))
 
-# Option to toggle negative test case generation
-generate_negative_tests = st.checkbox("Generate Negative Test Cases", value=True)
+            # Check if the required "paths" key is in the Swagger data
+            if 'paths' not in swagger_data:
+                print(f"Error: The 'paths' key is missing in the Swagger data.")
+                raise ValueError("The Swagger data does not contain the required 'paths' attribute.")
 
-if st.button("Generate Test Cases") and url:
-    try:
-        # Create an instance of the SwaggerLoader class
-        swagger_loader = SwaggerLoader()
+            # Return the loaded swagger data
+            return swagger_data
 
-        # Load Swagger data from the URL using the instance of the class
-        swagger_data = swagger_loader.load_swagger_from_url(url)
-        
-        # Generate test cases based on the Swagger data and user's choice
-        test_cases = generate_test_cases(swagger_data, generate_negative_tests)
+        except requests.exceptions.RequestException as e:
+            print(f"Error loading Swagger data: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON from Swagger URL: {e}")
+            raise
+        except ValueError as e:
+            print(f"Error processing Swagger data: {e}")
+            raise
 
-        # Show success message and number of test cases generated
-        st.success(f"{len(test_cases)} test cases generated!")
-
-        # Display the generated test cases as JSON
-        st.json(test_cases)
-
-        # Option to download the test cases as JSON
-        st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", "application/json")
-
-        # Option to save the test cases as CSV
-        save_as_csv = st.checkbox("Save as CSV")
-        if save_as_csv:
-            save_test_cases_to_csv(test_cases)
-            st.success("Test cases saved as CSV!")
-
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error loading Swagger data: {e}")
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+    def resolve_ref(self, schema):
+        """Resolve references in the Swagger schema."""
+        if "$ref" in schema:
+            ref_path = schema["$ref"]
+            # Assuming this is a reference to a local object in the Swagger document
+            # If your API uses external references, you will need to handle those separately
+            ref_parts = ref_path.split("/")
+            ref_key = ref_parts[-1]  # Get the last part after the "#/definitions/"
+            return self.swagger_data.get("definitions", {}).get(ref_key, {})
+        return schema

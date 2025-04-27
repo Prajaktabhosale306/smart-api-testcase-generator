@@ -1,7 +1,7 @@
 import streamlit as st
 import json
-from swagger_loader import SwaggerLoader
-from test_generator import TestGenerator
+from app.swagger_loader import SwaggerLoader
+from app.test_generator import TestGenerator
 
 def save_test_cases_to_csv(test_cases):
     import csv

@@ -1,59 +1,75 @@
+# app/test_generator.py
+
+import copy
 from app.negative_test_generator import NegativeTestGenerator
-from app.utils import build_payload_from_schema, extract_required_fields
 
-def resolve_ref(schema, swagger_data):
-    """
-    Resolves a JSON reference ($ref) to the actual schema object.
-    """
-    if not isinstance(schema, dict) or "$ref" not in schema:
-        return schema
-
-    ref_path = schema["$ref"].strip("#/").split("/")
-    resolved = swagger_data
-    for part in ref_path:
-        resolved = resolved.get(part, {})
-    return resolved
-
-def extract_request_body_schema(details, swagger_data):
-    """
-    Extracts and resolves the request body schema from OpenAPI 3.0.
-    """
-    schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
-    print(f"Extracted schema: {schema}")  # Debug log for schema
-    return resolve_ref(schema, swagger_data)
-
-def generate_test_cases(swagger_data, generate_negative_tests=True):
+def generate_test_cases(swagger_data, swagger_loader):
     test_cases = []
+    negative_test_generator = NegativeTestGenerator(swagger_loader)
+
     paths = swagger_data.get("paths", {})
 
-    # Initialize NegativeTestGenerator once
-    negative_test_generator = NegativeTestGenerator(swagger_data)
-
     for path, methods in paths.items():
-        for method, details in methods.items():
-            # Extract schema and required fields
-            schema = extract_request_body_schema(details, swagger_data)
-            payload = build_payload_from_schema(schema, swagger_data)
-            required_fields = extract_required_fields(schema)
+        for method, method_details in methods.items():
+            if method.upper() not in ["GET", "POST", "PUT", "PATCH", "DELETE"]:
+                continue  # Skip unsupported methods
 
-            print(f"Payload for {method.upper()} {path}: {payload}")  # Debug log for payload
-            print(f"Required fields for {method.upper()} {path}: {required_fields}")  # Debug log for required fields
+            # Positive test case
+            payload = {}
+            request_body = method_details.get("requestBody", {})
+            if request_body:
+                content = request_body.get("content", {})
+                if "application/json" in content:
+                    schema = content["application/json"].get("schema", {})
+                    if "$ref" in schema:
+                        schema = swagger_loader.resolve_ref(schema)
+                    payload = _generate_payload_from_schema(schema, swagger_loader)
 
-            # Create the regular test case
-            test_case = {
-                "endpoint": path,
+            test_cases.append({
+                "test_case_name": f"[POSITIVE] {method.upper()} {path}",
                 "method": method.upper(),
-                "description": details.get("summary", ""),
-                "payload": payload if payload else {},  # Ensure it's not None
-                "required_fields": required_fields if required_fields else [],  # Ensure it's not empty
-                "negative_tests": []  # Start with an empty list for negative tests
-            }
+                "endpoint": path,
+                "payload": payload if payload else None,
+                "expected_status": 200,  # Default for positive test
+                "test_type": "positive",
+            })
 
-            # If negative test case generation is enabled, generate negative tests
-            if generate_negative_tests:
-                negative_tests = negative_test_generator.generate_negative_tests_for_endpoint(path, details, method)
-                test_case['negative_tests'] = negative_tests  # Add negative tests to the test case
-
-            test_cases.append(test_case)  # Append only once
+            # Negative test cases
+            negative_tests = negative_test_generator.generate_negative_tests(method, method_details)
+            for negative in negative_tests:
+                test_cases.append({
+                    "test_case_name": f"[NEGATIVE] {method.upper()} {path} - Issue with '{negative['error_field']}'",
+                    "method": method.upper(),
+                    "endpoint": path,
+                    "payload": negative["payload"],
+                    "expected_status": 400,  # Or 422 depending on your API's behavior
+                    "test_type": negative["type"],
+                    "error_field": negative["error_field"],
+                })
 
     return test_cases
+
+def _generate_payload_from_schema(schema, swagger_loader):
+    if "$ref" in schema:
+        schema = swagger_loader.resolve_ref(schema)
+
+    payload = {}
+    properties = schema.get("properties", {})
+    for field, details in properties.items():
+        if "$ref" in details:
+            details = swagger_loader.resolve_ref(details)
+
+        field_type = details.get("type", "string")
+        payload[field] = _get_dummy_value(field_type)
+    return payload
+
+def _get_dummy_value(field_type):
+    dummy_values = {
+        "string": "sample",
+        "integer": 1,
+        "number": 1.1,
+        "boolean": True,
+        "object": {},
+        "array": []
+    }
+    return dummy_values.get(field_type, "sample")

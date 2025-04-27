@@ -3,6 +3,7 @@ import json
 import requests
 from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
+from app.negative_test_generator import NegativeTestGenerator
 
 def save_test_cases_to_csv(test_cases):
     import csv

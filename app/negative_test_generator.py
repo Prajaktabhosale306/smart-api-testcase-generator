@@ -1,28 +1,10 @@
 class NegativeTestGenerator:
-    """
-    Generates negative test cases based on Swagger/OpenAPI specifications.
-    Focus: Invalid payloads, missing fields, wrong data types, etc.
-    """
-
     def __init__(self, swagger_data):
-        """
-        Initialize with parsed Swagger/OpenAPI spec.
-        """
         self.swagger_data = swagger_data
 
     def generate_negative_tests_for_endpoint(self, endpoint, method_details):
-        """
-        Generate negative test cases for a given endpoint and method.
-
-        Args:
-            endpoint (str): API path like '/user/login'
-            method_details (dict): Details about POST/GET/PUT operation
-
-        Returns:
-            list: List of negative test case dictionaries
-        """
         negative_tests = []
-
+        
         # Step 1: Invalid payload structure (missing required fields)
         negative_tests += self._missing_required_fields(endpoint, method_details)
         
@@ -32,62 +14,65 @@ class NegativeTestGenerator:
         return negative_tests
 
     def _missing_required_fields(self, endpoint, method_details):
-        """
-        Generate test where required fields are missing.
-        Handles both top-level and nested fields.
-        """
         required_fields = method_details.get("required", [])
         schema = method_details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
 
         negative_tests = []
 
-        def handle_missing_fields(payload, required_fields):
-            for field in required_fields:
-                # Check for nested fields like 'user.address.city'
-                field_parts = field.split('.')
-                temp_payload = payload
-                for part in field_parts:
-                    if part not in temp_payload:
-                        break
-                    temp_payload = temp_payload[part]
-                else:
-                    # Recurse through nested objects and generate negative tests
-                    neg_payload = payload.copy()
-                    nested_payload = neg_payload
-                    for part in field_parts[:-1]:
-                        nested_payload = nested_payload.get(part, {})
-                    nested_payload.pop(field_parts[-1], None)
-                    negative_tests.append(neg_payload)
-
-        # Initial empty payload
-        initial_payload = self._generate_payload_from_schema(schema)
-        handle_missing_fields(initial_payload, required_fields)
+        if schema:
+            # Generate negative tests where required fields are missing
+            initial_payload = self._generate_payload_from_schema(schema)
+            self._handle_missing_fields(initial_payload, required_fields, negative_tests)
 
         return negative_tests
 
+    def _handle_missing_fields(self, payload, required_fields, negative_tests):
+        """
+        Recursively handle missing fields for nested structures.
+        """
+        for field in required_fields:
+            field_parts = field.split('.')
+            nested_payload = payload
+
+            # Traverse through nested fields
+            for part in field_parts[:-1]:
+                nested_payload = nested_payload.get(part, {})
+                if not isinstance(nested_payload, dict):
+                    break
+            else:
+                # Remove the field from the payload if it's nested
+                neg_payload = self._deep_copy(payload)
+                nested_payload = neg_payload
+                for part in field_parts[:-1]:
+                    nested_payload = nested_payload.get(part, {})
+                nested_payload.pop(field_parts[-1], None)
+                negative_tests.append(neg_payload)
+
     def _wrong_data_types(self, endpoint, method_details):
-        """
-        Generate test where fields have wrong data types.
-        """
         schema = method_details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
         properties = schema.get("properties", {})
 
         negative_tests = []
 
-        def handle_wrong_data_types(payload, properties):
-            for field, field_details in properties.items():
-                field_type = field_details.get("type", "")
-                wrong_type_value = self._get_wrong_data_for_type(field_type)
-                if wrong_type_value is not None:
-                    neg_payload = payload.copy()
-                    neg_payload[field] = wrong_type_value
-                    negative_tests.append(neg_payload)
-
-        # Initial empty payload
-        initial_payload = self._generate_payload_from_schema(schema)
-        handle_wrong_data_types(initial_payload, properties)
+        if schema:
+            # Generate test cases for wrong data types
+            initial_payload = self._generate_payload_from_schema(schema)
+            self._handle_wrong_data_types(initial_payload, properties, negative_tests)
 
         return negative_tests
+
+    def _handle_wrong_data_types(self, payload, properties, negative_tests):
+        """
+        Handle wrong data type test cases.
+        """
+        for field, field_details in properties.items():
+            field_type = field_details.get("type", "")
+            wrong_type_value = self._get_wrong_data_for_type(field_type)
+            if wrong_type_value is not None:
+                # Modify the field with wrong data type
+                neg_payload = self._deep_copy(payload)
+                neg_payload[field] = wrong_type_value
+                negative_tests.append(neg_payload)
 
     def _generate_payload_from_schema(self, schema):
         """
@@ -125,3 +110,10 @@ class NegativeTestGenerator:
         elif field_type == "object":
             return "string_instead_of_object"  # wrong type for object
         return None
+
+    def _deep_copy(self, obj):
+        """
+        Perform a deep copy of the given object (used for nested objects).
+        """
+        import copy
+        return copy.deepcopy(obj)

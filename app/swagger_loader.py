@@ -28,18 +28,35 @@ def load_swagger_from_url(url):
     if not isinstance(swagger_data, dict):
         raise ValueError("The Swagger data is not in the expected dictionary format.")
     
-    if 'swagger' not in swagger_data:
-        raise ValueError("'swagger' key not found in the Swagger specification.")
-    
-    if 'paths' not in swagger_data:
-        raise ValueError("'paths' key not found in the Swagger specification.")
+    # Check if the data is in Swagger 2.0 format (contains 'swagger' key) or OpenAPI 3.0 (contains 'openapi' key)
+    if 'swagger' in swagger_data:
+        print("Swagger 2.0 Format Detected.")
+        if 'paths' not in swagger_data:
+            raise ValueError("'paths' key not found in the Swagger 2.0 specification.")
+    elif 'openapi' in swagger_data:
+        print("OpenAPI 3.0 Format Detected.")
+        if 'paths' not in swagger_data:
+            raise ValueError("'paths' key not found in the OpenAPI 3.0 specification.")
+    else:
+        raise ValueError("The Swagger data does not contain a valid 'swagger' or 'openapi' key.")
     
     return swagger_data
+
+def extract_paths(swagger_data):
+    # Ensure that 'paths' exists and return the paths
+    if 'paths' not in swagger_data:
+        raise ValueError("The 'paths' key is missing from the Swagger specification.")
+    
+    return swagger_data['paths']
 
 def debug_swagger_data(url):
     # Load Swagger data from the URL
     try:
         swagger_data = load_swagger_from_url(url)
+        
+        # Print the Swagger data for debugging purposes
+        print("Swagger Data Loaded Successfully:", swagger_data)
+        
         # Try to extract paths from the swagger data
         paths = extract_paths(swagger_data)
         print("Paths Extracted Successfully:", paths)

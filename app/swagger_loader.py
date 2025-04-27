@@ -28,7 +28,7 @@ def load_swagger_from_url(url):
     if not isinstance(swagger_data, dict):
         raise ValueError("The Swagger data is not in the expected dictionary format.")
     
-    # Check if the data is in Swagger 2.0 format (contains 'swagger' key) or OpenAPI 3.0 (contains 'openapi' key)
+    # Check for Swagger 2.0 or OpenAPI 3.0 format
     if 'swagger' in swagger_data:
         print("Swagger 2.0 Format Detected.")
         if 'paths' not in swagger_data:
@@ -40,14 +40,23 @@ def load_swagger_from_url(url):
     else:
         raise ValueError("The Swagger data does not contain a valid 'swagger' or 'openapi' key.")
     
+    # For debugging, print the full structure of the Swagger file for manual inspection
+    print("Full Swagger Data Structure:", swagger_data)
+    
     return swagger_data
 
 def extract_paths(swagger_data):
-    # Ensure that 'paths' exists and return the paths
-    if 'paths' not in swagger_data:
-        raise ValueError("The 'paths' key is missing from the Swagger specification.")
+    # Try to find the 'paths' key in multiple possible locations
+    if 'paths' in swagger_data:
+        return swagger_data['paths']
     
-    return swagger_data['paths']
+    # Check for nested structures where 'paths' could be located
+    for key, value in swagger_data.items():
+        if isinstance(value, dict) and 'paths' in value:
+            print(f"Found 'paths' under nested key: {key}")
+            return value['paths']
+    
+    raise ValueError("The 'paths' key is missing in the Swagger specification.")
 
 def debug_swagger_data(url):
     # Load Swagger data from the URL

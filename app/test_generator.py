@@ -40,8 +40,8 @@ def generate_test_cases(swagger_data, generate_negative_tests=True):
                 "endpoint": path,
                 "method": method.upper(),
                 "description": details.get("summary", ""),
-                "payload": payload,
-                "required_fields": required_fields,
+                "payload": payload if payload else {},  # Ensure it's not None
+                "required_fields": required_fields if required_fields else [],  # Ensure it's not empty
                 "negative_tests": []  # Start with an empty list for negative tests
             }
 

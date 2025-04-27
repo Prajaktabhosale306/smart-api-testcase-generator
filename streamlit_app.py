@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import requests
 from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 

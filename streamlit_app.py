@@ -1,49 +1,53 @@
 import streamlit as st
 import json
-import requests
-from app.swagger_loader import load_swagger_from_url
-from app.test_generator import TestGenerator
-from app.utils import save_test_cases_to_json, save_test_cases_to_csv
+from swagger_loader import SwaggerLoader
+from test_generator import TestGenerator
 
-# Streamlit page configuration (must be the first command in the script)
-st.set_page_config(page_title="Smart API Test Case Generator", layout="wide")
+def save_test_cases_to_csv(test_cases):
+    import csv
+    keys = test_cases[0].keys()
+    with open("test_cases.csv", "w", newline='') as output_file:
+        dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+        dict_writer.writeheader()
+        dict_writer.writerows(test_cases)
 
-# App title
-st.title("Smart API Test Case Generator")
+# Main Streamlit Application
+def main():
+    st.title("Swagger-based Test Case Generator")
 
-# Input for Swagger/OpenAPI URL
-url = st.text_input("Enter Swagger/OpenAPI URL:")
+    url = st.text_input("Enter Swagger URL")
 
-# Option to toggle negative test case generation
-generate_negative_tests = st.checkbox("Generate Negative Test Cases", value=True)
+    if st.button("Generate Test Cases") and url:
+        try:
+            # Load Swagger data from the URL
+            swagger_loader = SwaggerLoader(url)
+            # Instantiate the TestGenerator class
+            test_generator = TestGenerator(swagger_loader)
 
-if st.button("Generate Test Cases") and url:
-    try:
-        # Load Swagger data from the URL
-        swagger_data = load_swagger_from_url(url)
+            # Generate test cases based on the Swagger data and user's choice
+            test_cases = test_generator.generate_tests()
 
-        # Instantiate the TestGenerator class
-        test_generator = TestGenerator(swagger_data)
+            # Show success message and number of test cases generated
+            st.success(f"{len(test_cases)} test cases generated!")
 
-        # Generate test cases based on the Swagger data and user's choice
-        test_cases = test_generator.generate_tests()
+            # Display the generated test cases as JSON
+            st.json(test_cases)
 
-        # Show success message and number of test cases generated
-        st.success(f"{len(test_cases)} test cases generated!")
+            # Option to download the test cases as JSON
+            st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", "application/json")
 
-        # Display the generated test cases as JSON
-        st.json(test_cases)
+            # Option to save the test cases as CSV
+            save_as_csv = st.checkbox("Save as CSV")
+            if save_as_csv:
+                save_test_cases_to_csv(test_cases)
+                st.success("Test cases saved as CSV!")
 
-        # Option to download the test cases as JSON
-        st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", "application/json")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error loading Swagger data: {e}")
+        except ValueError as e:
+            st.error(f"Error: {e}")  # This will handle errors like missing 'paths' or malformed data
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
 
-        # Option to save the test cases as CSV
-        save_as_csv = st.checkbox("Save as CSV")
-        if save_as_csv:
-            save_test_cases_to_csv(test_cases)
-            st.success("Test cases saved as CSV!")
-
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error loading Swagger data: {e}")
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
+if __name__ == "__main__":
+    main()

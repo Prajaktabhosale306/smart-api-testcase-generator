@@ -23,35 +23,33 @@ def extract_request_body_schema(details, swagger_data):
 
 def generate_test_cases(swagger_data, generate_negative_tests=True):
     test_cases = []
-    negative_test_cases = []  # To store negative test cases
     paths = swagger_data.get("paths", {})
 
-    # Initialize NegativeTestGenerator
+    # Initialize NegativeTestGenerator once
     negative_test_generator = NegativeTestGenerator(swagger_data)
 
     for path, methods in paths.items():
         for method, details in methods.items():
+            # Extract schema and required fields
             schema = extract_request_body_schema(details, swagger_data)
-
-            # Generate regular test case
             payload = build_payload_from_schema(schema, swagger_data)
             required_fields = extract_required_fields(schema)
 
+            # Create the regular test case
             test_case = {
                 "endpoint": path,
                 "method": method.upper(),
                 "description": details.get("summary", ""),
                 "payload": payload,
                 "required_fields": required_fields,
+                "negative_tests": []  # Start with an empty list for negative tests
             }
-            test_cases.append(test_case)
 
-             # If negative test case generation is enabled, add the negative tests
+            # If negative test case generation is enabled, generate negative tests
             if generate_negative_tests:
-                negative_generator = NegativeTestGenerator(swagger_data)
-                negative_tests = negative_generator.generate_negative_tests_for_endpoint(path, details)
+                negative_tests = negative_test_generator.generate_negative_tests_for_endpoint(path, details)
                 test_case['negative_tests'] = negative_tests  # Add negative tests to the test case
-            
-            test_cases.append(test_case)
+
+            test_cases.append(test_case)  # Append only once
 
     return test_cases

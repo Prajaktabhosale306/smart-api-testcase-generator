@@ -99,32 +99,34 @@ class NegativeTestGenerator:
         return negative_tests
 
     def _generate_payload_from_schema(self, schema):
-        """
-        Generate an empty payload based on the schema (handles different data types).
-        """
-        payload = {}
-        properties = schema.get("properties", {})
+    """
+    Generate an empty payload based on the schema (handles different data types).
+    This function handles both top-level properties and nested objects.
+    """
+    payload = {}
+    properties = schema.get("properties", {})
 
-        if not properties:
-            print(f"No properties in schema, can't generate payload.")
-            return None
+    if not properties:
+        print(f"No properties in schema, can't generate payload.")
+        return None
 
-        for field, field_details in properties.items():
-            field_type = field_details.get("type", "")
-            if field_type == "string":
-                payload[field] = ""
-            elif field_type == "integer":
-                payload[field] = 0
-            elif field_type == "boolean":
-                payload[field] = False
-            elif field_type == "array":
-                payload[field] = []
-            elif field_type == "object":
-                payload[field] = {}
-            else:
-                print(f"Unsupported field type {field_type} for {field}")
+    for field, field_details in properties.items():
+        field_type = field_details.get("type", "")
+        if field_type == "string":
+            payload[field] = ""
+        elif field_type == "integer":
+            payload[field] = 0
+        elif field_type == "boolean":
+            payload[field] = False
+        elif field_type == "array":
+            payload[field] = []
+        elif field_type == "object":
+            # Recursively handle nested objects
+            payload[field] = self._generate_payload_from_schema(field_details.get("properties", {}))
+        else:
+            print(f"Unsupported field type {field_type} for {field}")
 
-        return payload
+    return payload
 
     def _get_wrong_data_for_type(self, field_type):
         """

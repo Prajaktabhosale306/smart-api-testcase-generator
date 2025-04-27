@@ -18,7 +18,7 @@ class NegativeTestGenerator:
         """
         negative_tests = []
         # Avoid duplicate tests for the same method and endpoint
-        test_case_key = (endpoint, method_details.get('method'))
+        test_case_key = (endpoint, method)  # Use method directly, not from method_details
 
         if test_case_key not in self.generated_tests:
             self.generated_tests.add(test_case_key)

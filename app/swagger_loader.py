@@ -6,10 +6,10 @@ def load_swagger_from_url(url):
     response.raise_for_status()
     swagger_data = response.json()
 
-    # Debugging: Print the first few items of the swagger data to analyze structure
-    print("Swagger Data:", swagger_data)
+    # Print the entire Swagger data to debug the structure
+    print("Raw Swagger Data:", swagger_data)
 
-    # Check for Swagger 2.0 or OpenAPI 3.0 based on the keys present
+    # Check if it's Swagger 2.0 or OpenAPI 3.0 format
     if 'swagger' in swagger_data:  # Swagger 2.0
         print("Swagger 2.0 detected.")
         if 'paths' not in swagger_data:
@@ -23,15 +23,3 @@ def load_swagger_from_url(url):
     else:
         raise ValueError("Unsupported Swagger/OpenAPI format or missing 'paths'.")
 
-def extract_request_body(path_data):
-    try:
-        # Handle OpenAPI 3.0 and Swagger 2.0 request body formats
-        if 'requestBody' in path_data:  # OpenAPI 3.0
-            return path_data['requestBody']['content']['application/json']['schema']
-        elif 'parameters' in path_data:  # Swagger 2.0
-            for param in path_data['parameters']:
-                if param.get('in') == 'body':
-                    return param.get('schema', {})
-        return {}
-    except KeyError:
-        return {}

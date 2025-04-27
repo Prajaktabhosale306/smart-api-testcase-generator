@@ -15,6 +15,14 @@ def resolve_ref(schema, swagger_data):
     return resolved
 
 
+def log_to_file(message, filename="debug_log.txt"):
+    """
+    Logs messages to a file for debugging purposes.
+    """
+    with open(filename, "a") as log_file:
+        log_file.write(message + "\n")
+
+
 def build_payload_from_schema(schema, swagger_data=None):
     """
     Build a dynamic payload from an OpenAPI schema, including:
@@ -23,17 +31,22 @@ def build_payload_from_schema(schema, swagger_data=None):
     - nested $ref resolution
     """
     if not schema:
+        log_to_file("Schema is empty!")
         return {}
+
+    log_to_file(f"Building payload for schema: {json.dumps(schema, indent=2)}")
 
     schema_type = schema.get("type", "object")
 
     # 🔁 Resolve top-level $ref
     if "$ref" in schema and swagger_data:
+        log_to_file("Resolving $ref for schema...")
         schema = resolve_ref(schema, swagger_data)
         schema_type = schema.get("type", "object")
 
     # 📦 Handle arrays
     if schema_type == "array":
+        log_to_file("Handling array schema...")
         item_schema = schema.get("items", {})
 
         # Resolve $ref in array item
@@ -44,6 +57,7 @@ def build_payload_from_schema(schema, swagger_data=None):
 
     # 📦 Handle objects
     if schema_type != "object" or "properties" not in schema:
+        log_to_file("Schema is not an object or has no properties.")
         return {}
 
     payload = {}
@@ -52,8 +66,11 @@ def build_payload_from_schema(schema, swagger_data=None):
 
         # Resolve nested $ref
         if "$ref" in prop_schema and swagger_data:
+            log_to_file(f"Resolving $ref for property: {prop}")
             prop_schema = resolve_ref(prop_schema, swagger_data)
             prop_type = prop_schema.get("type", "object")
+
+        log_to_file(f"Adding property {prop} of type {prop_type}")
 
         if prop_type == "string":
             payload[prop] = "example_string"
@@ -74,6 +91,7 @@ def build_payload_from_schema(schema, swagger_data=None):
         else:
             payload[prop] = None
 
+    log_to_file(f"Generated payload: {json.dumps(payload, indent=2)}")
     return payload
 
 

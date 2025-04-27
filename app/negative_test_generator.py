@@ -23,6 +23,11 @@ class NegativeTestGenerator:
         """
         negative_tests = []
 
+        # Ensure 'method' is present in method_details
+        if 'method' not in method_details:
+            print(f"Error: 'method' key is missing for endpoint: {endpoint}")
+            return negative_tests
+
         # Debug: Print method details
         print(f"Generating tests for {endpoint} [{method_details['method']}]")
 

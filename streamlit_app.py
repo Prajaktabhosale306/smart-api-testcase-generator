@@ -1,4 +1,4 @@
-iimport streamlit as st
+import streamlit as st
 import json
 import requests
 from app.swagger_loader import load_swagger_from_url

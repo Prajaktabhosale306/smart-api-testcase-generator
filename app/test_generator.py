@@ -2,7 +2,7 @@
 
 from app.negative_test_generator import NegativeTestGenerator
 
-class TestGenerator:
+class generate_test_cases:
     def __init__(self, swagger_loader):
         self.swagger_loader = swagger_loader
         self.negative_generator = NegativeTestGenerator(swagger_loader)

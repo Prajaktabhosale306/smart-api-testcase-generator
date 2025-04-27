@@ -1,5 +1,5 @@
 import json
-from negative_test_generator import NegativeTestGenerator
+from .negative_test_generator import NegativeTestGenerator  # Use relative import
 
 class TestGenerator:
     def __init__(self, swagger_loader):

@@ -1,146 +1,97 @@
+# app/negative_test_generator.py
+
+import copy
+
 class NegativeTestGenerator:
-    """
-    Generates negative test cases based on Swagger/OpenAPI specifications.
-    Focus: Invalid payloads, missing fields, wrong data types, etc.
-    """
+    def __init__(self, swagger_loader):
+        self.swagger_loader = swagger_loader
 
-    def __init__(self, swagger_data):
-        """
-        Initialize with parsed Swagger/OpenAPI spec.
-        """
-        self.swagger_data = swagger_data
-        self.generated_tests = set()  # Initialize the set to keep track of generated tests
-
-    def generate_negative_tests_for_endpoint(self, endpoint, method_details, method):
-        """
-        Generate negative test cases for a given endpoint and method.
-        Ensure no duplicate tests for the same endpoint and method.
-        """
+    def generate_negative_tests(self, method, method_details):
         negative_tests = []
-        # Avoid duplicate tests for the same method and endpoint
-        test_case_key = (endpoint, method)
+        request_body = method_details.get("requestBody", {})
+        content = request_body.get("content", {})
+        schema = content.get("application/json", {}).get("schema", {})
 
-        if test_case_key not in self.generated_tests:
-            self.generated_tests.add(test_case_key)
+        if not schema:
+            return negative_tests  # No request body to generate negatives for
 
-            # Generate tests for this endpoint-method pair
-            print(f"Generating tests for {test_case_key}")
-            missing_field_tests = self._missing_required_fields(endpoint, method_details)
-            wrong_data_type_tests = self._wrong_data_types(endpoint, method_details)
+        resolved_schema = self.swagger_loader.resolve_ref(schema) if "$ref" in schema else schema
+        required_fields = resolved_schema.get("required", [])
+        properties = resolved_schema.get("properties", {})
 
-            # Collect generated tests
-            if missing_field_tests:
-                negative_tests.extend(missing_field_tests)
-            if wrong_data_type_tests:
-                negative_tests.extend(wrong_data_type_tests)
+        if not properties:
+            return negative_tests
 
-        return negative_tests
+        base_payload = self._generate_payload_from_schema(resolved_schema)
 
-    def _missing_required_fields(self, endpoint, method_details):
-        """
-        Generate test where required fields are missing.
-        Handles both top-level and nested fields.
-        """
-        required_fields = method_details.get("required", [])
-        schema = method_details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+        missing_required_payloads = self._handle_missing_required_fields(base_payload, required_fields)
+        wrong_data_type_payloads = self._handle_wrong_data_types(base_payload, properties)
 
-        negative_tests = []
-
-        if not required_fields:
-            print(f"No required fields for {endpoint}")
-            return []
-
-        def handle_missing_fields(payload, required_fields):
-            for field in required_fields:
-                field_parts = field.split('.')
-                temp_payload = payload
-                for part in field_parts:
-                    if part not in temp_payload:
-                        break
-                    temp_payload = temp_payload[part]
-                else:
-                    # Remove the field from payload and create negative test
-                    neg_payload = payload.copy()
-                    nested_payload = neg_payload
-                    for part in field_parts[:-1]:
-                        nested_payload = nested_payload.get(part, {})
-                    nested_payload.pop(field_parts[-1], None)
-                    negative_tests.append(neg_payload)
-
-        # Generate initial empty payload based on schema
-        initial_payload = self._generate_payload_from_schema(schema)
-        if initial_payload:
-            handle_missing_fields(initial_payload, required_fields)
-
-        return negative_tests
-
-    def _wrong_data_types(self, endpoint, method_details):
-        """
-        Generate test where fields have wrong data types.
-        """
-        schema = method_details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
-        properties = schema.get("properties", {})
-
-        negative_tests = []
-
-        def handle_wrong_data_types(payload, properties):
-            for field, field_details in properties.items():
-                field_type = field_details.get("type", "")
-                wrong_type_value = self._get_wrong_data_for_type(field_type)
-                if wrong_type_value is not None:
-                    neg_payload = payload.copy()
-                    neg_payload[field] = wrong_type_value
-                    negative_tests.append(neg_payload)
-
-        # Generate initial empty payload based on schema
-        initial_payload = self._generate_payload_from_schema(schema)
-        if initial_payload:
-            handle_wrong_data_types(initial_payload, properties)
+        negative_tests.extend(missing_required_payloads)
+        negative_tests.extend(wrong_data_type_payloads)
 
         return negative_tests
 
     def _generate_payload_from_schema(self, schema):
-        """
-        Generate an empty payload based on the schema (handles different data types).
-        This function handles both top-level properties and nested objects.
-        """
+        if "$ref" in schema:
+            schema = self.swagger_loader.resolve_ref(schema)
+
         payload = {}
         properties = schema.get("properties", {})
+        for field, details in properties.items():
+            if "$ref" in details:
+                details = self.swagger_loader.resolve_ref(details)
 
-        if not properties:
-            print(f"No properties in schema, can't generate payload.")
-            return None
-
-        for field, field_details in properties.items():
-            field_type = field_details.get("type", "")
-            if field_type == "string":
-                payload[field] = ""
-            elif field_type == "integer":
-                payload[field] = 0
-            elif field_type == "boolean":
-                payload[field] = False
-            elif field_type == "array":
-                payload[field] = []
-            elif field_type == "object":
-                # Recursively handle nested objects
-                payload[field] = self._generate_payload_from_schema(field_details.get("properties", {}))
-            else:
-                print(f"Unsupported field type {field_type} for {field}")
-
+            field_type = details.get("type", "string")
+            payload[field] = self._get_dummy_value(field_type)
         return payload
 
-    def _get_wrong_data_for_type(self, field_type):
-        """
-        Get a wrong data type value based on the field's expected type.
-        """
-        if field_type == "string":
-            return 123  # wrong type for string
-        elif field_type == "integer":
-            return "string_value"  # wrong type for integer
-        elif field_type == "boolean":
-            return "string"  # wrong type for boolean
-        elif field_type == "array":
-            return {}  # wrong type for array
-        elif field_type == "object":
-            return "string_instead_of_object"  # wrong type for object
-        return None
+    def _get_dummy_value(self, field_type):
+        dummy_values = {
+            "string": "sample",
+            "integer": 0,
+            "number": 0.0,
+            "boolean": True,
+            "object": {},
+            "array": []
+        }
+        return dummy_values.get(field_type, "sample")
+
+    def _handle_missing_required_fields(self, payload, required_fields):
+        negative_payloads = []
+        for field in required_fields:
+            modified_payload = copy.deepcopy(payload)
+            if field in modified_payload:
+                del modified_payload[field]
+            negative_payloads.append({
+                "type": "missing_required_field",
+                "payload": modified_payload,
+                "error_field": field
+            })
+        return negative_payloads
+
+    def _handle_wrong_data_types(self, payload, properties):
+        negative_payloads = []
+        wrong_values = {
+            "string": 123,
+            "integer": "wrong_integer",
+            "number": "wrong_number",
+            "boolean": "not_boolean",
+            "object": "not_an_object",
+            "array": "not_an_array"
+        }
+
+        for field, details in properties.items():
+            if "$ref" in details:
+                details = self.swagger_loader.resolve_ref(details)
+
+            correct_type = details.get("type", "string")
+            if correct_type in wrong_values:
+                modified_payload = copy.deepcopy(payload)
+                modified_payload[field] = wrong_values[correct_type]
+                negative_payloads.append({
+                    "type": "wrong_data_type",
+                    "payload": modified_payload,
+                    "error_field": field
+                })
+        return negative_payloads

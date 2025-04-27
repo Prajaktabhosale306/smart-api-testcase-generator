@@ -1,3 +1,4 @@
+from app.negative_test_generator import NegativeTestGenerator
 class TestGenerator:
     def __init__(self, swagger_loader):
         self.swagger_loader = swagger_loader

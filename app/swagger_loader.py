@@ -8,6 +8,9 @@ def load_swagger_from_url(url):
         
         swagger_data = response.json()
 
+        # Print the Swagger data to debug
+        print("Swagger Data:", json.dumps(swagger_data, indent=2))
+
         # Check if swagger data contains 'paths'
         if 'paths' not in swagger_data:
             raise ValueError("Invalid Swagger data: 'paths' attribute missing.")

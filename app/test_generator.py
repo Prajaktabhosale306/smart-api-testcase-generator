@@ -2,91 +2,82 @@
 
 from app.negative_test_generator import NegativeTestGenerator
 
-def generate_test_cases(swagger_data, swagger_loader):
-    test_cases = []
-    negative_test_generator = NegativeTestGenerator(swagger_loader)
+class TestGenerator:
+    def __init__(self, swagger_loader):
+        self.swagger_loader = swagger_loader
+        self.negative_generator = NegativeTestGenerator(swagger_loader)
 
-    paths = swagger_data.get("paths", {})
+    def generate_tests(self):
+        endpoints = []
 
-    for path, methods in paths.items():
-        for method, method_details in methods.items():
-            if method.upper() not in ["GET", "POST", "PUT", "PATCH", "DELETE"]:
-                continue
+        for path, path_item in self.swagger_loader.paths.items():
+            for method, method_details in path_item.items():
+                if method.lower() not in ["get", "post", "put", "delete", "patch"]:
+                    continue  # skip unsupported methods
 
-            payload, required_fields = _extract_payload_and_required_fields(method_details, swagger_loader)
+                endpoint_info = {
+                    "endpoint": path,
+                    "method": method.upper(),
+                    "description": method_details.get("summary", ""),
+                    "payload": {},
+                    "required_fields": [],
+                    "positive_test": {},
+                    "negative_tests": []
+                }
 
-            positive_payload = payload.copy() if payload else {}
+                # Generate payload for positive test
+                request_body = method_details.get("requestBody", {})
+                content = request_body.get("content", {})
+                schema = content.get("application/json", {}).get("schema", {})
 
-            # Base Test Case
-            test_case = {
-                "endpoint": path,
-                "method": method.upper(),
-                "description": method_details.get("summary", ""),
-                "payload": payload,
-                "required_fields": required_fields,
-                "positive_test": positive_payload,
-                "negative_tests": []
-            }
+                if schema:
+                    resolved_schema = self.swagger_loader.resolve_ref(schema) if "$ref" in schema else schema
+                    endpoint_info["payload"] = self._generate_payload_from_schema(resolved_schema)
+                    endpoint_info["required_fields"] = resolved_schema.get("required", [])
+                    endpoint_info["positive_test"] = endpoint_info["payload"]
 
-            # Generate Negative Test Cases (only if required fields exist)
-            if required_fields:
-                negative_tests = negative_test_generator.generate_negative_tests(payload, required_fields)
-                for neg in negative_tests:
-                    test_case["negative_tests"].append(neg)
+                # Prepare path and query parameters
+                parameters = method_details.get("parameters", [])
+                path_params = [p for p in parameters if p.get("in") == "path"]
+                query_params = [p for p in parameters if p.get("in") == "query"]
 
-            test_cases.append(test_case)
+                # Generate negative tests
+                negative_tests = self.negative_generator.generate_negative_tests(
+                    method,
+                    method_details,
+                    path_params=path_params,
+                    query_params=query_params
+                )
+                endpoint_info["negative_tests"] = negative_tests
 
-    return test_cases
+                endpoints.append(endpoint_info)
 
-def _extract_payload_and_required_fields(method_details, swagger_loader):
-    payload = {}
-    required_fields = []
+        return endpoints
 
-    # 1. Handle body payload
-    request_body = method_details.get("requestBody", {})
-    if request_body:
-        content = request_body.get("content", {})
-        if "application/json" in content:
-            schema = content["application/json"].get("schema", {})
-            if "$ref" in schema:
-                schema = swagger_loader.resolve_ref(schema)
-            payload = _generate_payload_from_schema(schema, swagger_loader)
-            required_fields = schema.get("required", [])
+    def _generate_payload_from_schema(self, schema):
+        if "$ref" in schema:
+            schema = self.swagger_loader.resolve_ref(schema)
 
-    # 2. Handle query/path parameters
-    parameters = method_details.get("parameters", [])
-    for param in parameters:
-        if param.get("in") in ["query", "path"]:
-            param_name = param.get("name")
-            required = param.get("required", False)
-            if required and param_name not in required_fields:
-                required_fields.append(param_name)
-            payload[param_name] = _get_dummy_value(param.get("schema", {}).get("type", "string"))
+        payload = {}
+        properties = schema.get("properties", {})
+        for field, details in properties.items():
+            if "$ref" in details:
+                details = self.swagger_loader.resolve_ref(details)
 
-    return payload, required_fields
+            field_type = details.get("type", "string")
+            if field_type == "object" and "properties" in details:
+                payload[field] = self._generate_payload_from_schema(details)
+            else:
+                payload[field] = self._get_dummy_value(field_type)
+        return payload
 
-def _generate_payload_from_schema(schema, swagger_loader):
-    if "$ref" in schema:
-        schema = swagger_loader.resolve_ref(schema)
-
-    payload = {}
-    properties = schema.get("properties", {})
-    for field, details in properties.items():
-        if "$ref" in details:
-            details = swagger_loader.resolve_ref(details)
-
-        field_type = details.get("type", "string")
-        payload[field] = _get_dummy_value(field_type)
-
-    return payload
-
-def _get_dummy_value(field_type):
-    dummy_values = {
-        "string": "sample",
-        "integer": 123,
-        "number": 1.23,
-        "boolean": True,
-        "object": {},
-        "array": []
-    }
-    return dummy_values.get(field_type, "sample")
+    def _get_dummy_value(self, field_type):
+        dummy_values = {
+            "string": "sample",
+            "integer": 0,
+            "number": 0.0,
+            "boolean": True,
+            "object": {},
+            "array": []
+        }
+        return dummy_values.get(field_type, "sample")

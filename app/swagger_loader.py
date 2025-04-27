@@ -1,77 +1,110 @@
 import requests
-from requests.exceptions import ConnectionError, Timeout, HTTPError
+import json
 
 def load_swagger_from_url(url):
-    # Try to fetch the Swagger specification from the URL
+    """
+    Fetches Swagger specification from a URL and returns the parsed JSON data.
+
+    Args:
+        url (str): The URL to fetch the Swagger specification from.
+
+    Returns:
+        dict: The parsed Swagger JSON data.
+
+    Raises:
+        ValueError: If the data is not in valid JSON format or the necessary fields are missing.
+        requests.exceptions.RequestException: If there is an issue with the network request.
+    """
     try:
+        # Fetch the Swagger specification from the URL
         response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad status codes (4xx, 5xx)
-    except ConnectionError:
-        raise ConnectionError(f"Unable to connect to the URL: {url}. Check your network connection or the URL itself.")
-    except Timeout:
-        raise Timeout(f"Request to {url} timed out. Please check the server status or try again later.")
-    except HTTPError as e:
-        raise HTTPError(f"HTTP Error {e.response.status_code} occurred when accessing {url}.")
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred: {e}")
-    
-    # Try to parse the Swagger JSON data
+        
+        # Check if the response status is OK (200)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to fetch Swagger file. Status code: {response.status_code}")
+        
+        # Try to parse the Swagger JSON data
+        try:
+            swagger_data = response.json()
+        except json.JSONDecodeError:
+            raise ValueError("Invalid JSON format in the Swagger response.")
+        
+        # Check if the Swagger data is in the correct format
+        if not isinstance(swagger_data, dict):
+            raise ValueError("The Swagger data is not in the expected dictionary format.")
+
+        # Debugging: Print the raw Swagger data (for inspection)
+        print("Raw Swagger Data:", json.dumps(swagger_data, indent=2))  # Pretty print for better readability
+        
+        # Check if 'swagger' and 'paths' keys are present
+        if 'swagger' not in swagger_data:
+            raise ValueError("'swagger' key not found in the Swagger specification.")
+        
+        if 'paths' not in swagger_data:
+            raise ValueError("'paths' key not found in the Swagger specification.")
+        
+        return swagger_data
+
+    except requests.exceptions.RequestException as e:
+        # Handle network-related errors
+        raise ValueError(f"Network error while fetching Swagger file: {e}")
+
+def extract_request_body(path_data):
+    """
+    Extracts the request body from a specific path data.
+
+    Args:
+        path_data (dict): The path-specific data from the Swagger specification.
+
+    Returns:
+        dict: The extracted request body schema, if it exists, otherwise an empty dictionary.
+    """
     try:
-        swagger_data = response.json()
-    except ValueError:
-        raise ValueError("Invalid JSON format in the Swagger response.")
-    
-    # Print the raw Swagger data to debug
-    print("Raw Swagger Data:", swagger_data)
-    
-    # Ensure 'swagger' or 'openapi' key exists in the Swagger specification
-    if not isinstance(swagger_data, dict):
-        raise ValueError("The Swagger data is not in the expected dictionary format.")
-    
-    # Check for Swagger 2.0 or OpenAPI 3.0 format
-    if 'swagger' in swagger_data:
-        print("Swagger 2.0 Format Detected.")
-        if 'paths' not in swagger_data:
-            print("The 'paths' key is missing in the Swagger 2.0 specification.")
-    elif 'openapi' in swagger_data:
-        print("OpenAPI 3.0 Format Detected.")
-        if 'paths' not in swagger_data:
-            print("The 'paths' key is missing in the OpenAPI 3.0 specification.")
-    else:
-        raise ValueError("The Swagger data does not contain a valid 'swagger' or 'openapi' key.")
-    
-    # For debugging, print the full structure of the Swagger file for manual inspection
-    print("Full Swagger Data Structure:", swagger_data)
-    
-    return swagger_data
+        # Extract request body if it exists for the path
+        return path_data.get('requestBody', {}).get('content', {}).get('application/json', {}).get('schema', {})
+    except KeyError:
+        # Return an empty dictionary if 'requestBody' or 'content' doesn't exist
+        return {}
 
 def extract_paths(swagger_data):
-    # Try to find the 'paths' key in multiple possible locations
-    if 'paths' in swagger_data:
-        return swagger_data['paths']
+    """
+    Extracts the paths from the Swagger data.
+
+    Args:
+        swagger_data (dict): The Swagger specification data.
+
+    Returns:
+        dict: The paths object from the Swagger specification.
     
-    # Check for nested structures where 'paths' could be located
-    for key, value in swagger_data.items():
-        if isinstance(value, dict) and 'paths' in value:
-            print(f"Found 'paths' under nested key: {key}")
-            return value['paths']
+    Raises:
+        ValueError: If 'paths' key is missing.
+    """
+    if 'paths' not in swagger_data:
+        raise ValueError("The 'paths' key is missing from the Swagger specification.")
     
-    raise ValueError("The 'paths' key is missing in the Swagger specification.")
+    return swagger_data['paths']
 
 def debug_swagger_data(url):
-    # Load Swagger data from the URL
+    """
+    Debug function to load and print the Swagger data, checking for issues in paths extraction.
+    
+    Args:
+        url (str): The URL to the Swagger file.
+    """
     try:
+        # Load Swagger data from the URL
         swagger_data = load_swagger_from_url(url)
         
-        # Print the Swagger data for debugging purposes
-        print("Swagger Data Loaded Successfully:", swagger_data)
+        # Debugging: Print the loaded Swagger data
+        print("Swagger Data Loaded Successfully")
         
-        # Try to extract paths from the swagger data
-        paths = extract_paths(swagger_data)
-        print("Paths Extracted Successfully:", paths)
-    except (ConnectionError, Timeout, HTTPError, ValueError, Exception) as e:
-        print(f"Error while loading Swagger data: {e}")
-
-# Example Usage
-url = 'https://api.example.com/swagger.json'  # Replace with your Swagger URL
-debug_swagger_data(url)
+        # Try to extract paths from the Swagger data
+        try:
+            paths = extract_paths(swagger_data)
+            print("Paths Extracted Successfully:")
+            print(json.dumps(paths, indent=2))  # Pretty print the paths for better readability
+        except ValueError as e:
+            print(f"Error while extracting paths: {e}")
+        
+    except ValueError as e:
+        print(f"Error loading Swagger data: {e}")

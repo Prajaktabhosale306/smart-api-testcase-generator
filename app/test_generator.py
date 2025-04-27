@@ -19,6 +19,7 @@ def extract_request_body_schema(details, swagger_data):
     Extracts and resolves the request body schema from OpenAPI 3.0.
     """
     schema = details.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
+    print(f"Extracted schema: {schema}")  # Debug log for schema
     return resolve_ref(schema, swagger_data)
 
 def generate_test_cases(swagger_data, generate_negative_tests=True):
@@ -34,6 +35,9 @@ def generate_test_cases(swagger_data, generate_negative_tests=True):
             schema = extract_request_body_schema(details, swagger_data)
             payload = build_payload_from_schema(schema, swagger_data)
             required_fields = extract_required_fields(schema)
+
+            print(f"Payload for {method.upper()} {path}: {payload}")  # Debug log for payload
+            print(f"Required fields for {method.upper()} {path}: {required_fields}")  # Debug log for required fields
 
             # Create the regular test case
             test_case = {

@@ -1,7 +1,3 @@
-# app/test_generator.py
-
-from app.negative_test_generator import NegativeTestGenerator
-
 class TestGenerator:
     def __init__(self, swagger_loader):
         self.swagger_loader = swagger_loader
@@ -53,31 +49,3 @@ class TestGenerator:
                 endpoints.append(endpoint_info)
 
         return endpoints
-
-    def _generate_payload_from_schema(self, schema):
-        if "$ref" in schema:
-            schema = self.swagger_loader.resolve_ref(schema)
-
-        payload = {}
-        properties = schema.get("properties", {})
-        for field, details in properties.items():
-            if "$ref" in details:
-                details = self.swagger_loader.resolve_ref(details)
-
-            field_type = details.get("type", "string")
-            if field_type == "object" and "properties" in details:
-                payload[field] = self._generate_payload_from_schema(details)
-            else:
-                payload[field] = self._get_dummy_value(field_type)
-        return payload
-
-    def _get_dummy_value(self, field_type):
-        dummy_values = {
-            "string": "sample",
-            "integer": 0,
-            "number": 0.0,
-            "boolean": True,
-            "object": {},
-            "array": []
-        }
-        return dummy_values.get(field_type, "sample")

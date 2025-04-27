@@ -1,8 +1,7 @@
 import streamlit as st
 import json
-import requests
 from app.swagger_loader import load_swagger_from_url
-from app.test_generator import TestGenerator  # Importing the correct class
+from app.test_generator import TestGenerator  # Ensure this is the correct class
 from app.utils import save_test_cases_to_json, save_test_cases_to_csv
 
 # Streamlit page configuration (must be the first command in the script)

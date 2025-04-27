@@ -47,7 +47,7 @@ def generate_test_cases(swagger_data, generate_negative_tests=True):
 
             # If negative test case generation is enabled, generate negative tests
             if generate_negative_tests:
-                negative_tests = negative_test_generator.generate_negative_tests_for_endpoint(path, details)
+                negative_tests = negative_test_generator.generate_negative_tests_for_endpoint(path, details, method)
                 test_case['negative_tests'] = negative_tests  # Add negative tests to the test case
 
             test_cases.append(test_case)  # Append only once

@@ -31,4 +31,3 @@ def load_swagger(swagger_url_or_data):
     
     else:
         raise ValueError("Input must be a URL string, dictionary, or file path.")
-

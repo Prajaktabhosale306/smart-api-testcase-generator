@@ -5,15 +5,17 @@ def load_swagger_from_url(url):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Raise error for bad responses (4xx or 5xx)
-        
+
+        # Try to parse the JSON
         swagger_data = response.json()
 
-        # Print the Swagger data to debug
-        print("Swagger Data:", json.dumps(swagger_data, indent=2))
+        # Debugging: print the raw response from the Swagger URL
+        print("Raw Swagger Data: ", json.dumps(swagger_data, indent=2))
 
-        # Check if swagger data contains 'paths'
+        # Check if 'paths' key exists in the Swagger data
         if 'paths' not in swagger_data:
-            raise ValueError("Invalid Swagger data: 'paths' attribute missing.")
+            print(f"Error: The 'paths' key is missing in the Swagger data.")
+            raise ValueError("The Swagger data does not contain the required 'paths' attribute.")
         
         return swagger_data
 

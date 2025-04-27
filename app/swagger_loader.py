@@ -5,6 +5,9 @@ def load_swagger_from_url(url):
     response.raise_for_status()
     swagger_data = response.json()
 
+    # Debugging: Print the structure of the returned data
+    print("Swagger Data:", swagger_data)
+
     # Check for Swagger 2.0 or OpenAPI 3.0
     if 'swagger' in swagger_data:  # Swagger 2.0
         print("Swagger 2.0 detected.")

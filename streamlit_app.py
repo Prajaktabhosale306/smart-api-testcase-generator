@@ -5,51 +5,57 @@ from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
 
-def save_test_cases_to_csv(test_cases):
-    import csv
-    keys = test_cases[0].keys()
-    with open("test_cases.csv", "w", newline='') as output_file:
-        dict_writer = csv.DictWriter(output_file, fieldnames=keys)
-        dict_writer.writeheader()
-        dict_writer.writerows(test_cases)
-
-# Main Streamlit Application
 def main():
-    st.title("Swagger-based Test Case Generator")
+    st.title("Smart API Test Case Generator 🚀")
 
-    url = st.text_input("Enter Swagger URL")
+    uploaded_file = st.file_uploader("Upload Swagger/OpenAPI JSON file", type=["json"])
+    swagger_url = st.text_input("Or enter Swagger/OpenAPI URL")
 
-    if st.button("Generate Test Cases") and url:
-        try:
-            # Load Swagger data from the URL
-            swagger_loader = SwaggerLoader(url)
-            # Instantiate the TestGenerator class
-            test_generator = TestGenerator(swagger_loader)
+    if uploaded_file or swagger_url:
+        if uploaded_file:
+            try:
+                swagger_data = json.load(uploaded_file)
+            except Exception as e:
+                st.error(f"Error reading JSON file: {e}")
+                return
+        else:
+            try:
+                response = requests.get(swagger_url)
+                response.raise_for_status()
+                swagger_data = response.json()
+            except requests.exceptions.RequestException as e:
+                st.error(f"Error fetching Swagger file: {e}")
+                return
+            except ValueError:
+                st.error("Invalid JSON response from URL.")
+                return
 
-            # Generate test cases based on the Swagger data and user's choice
-            test_cases = test_generator.generate_tests()
+        loader = SwaggerLoader(swagger_data)
+        generator = TestGenerator(loader)
+        negative_generator = NegativeTestGenerator(loader)
 
-            # Show success message and number of test cases generated
-            st.success(f"{len(test_cases)} test cases generated!")
+        st.success("Swagger file loaded successfully!")
 
-            # Display the generated test cases as JSON
+        if st.button("Generate Test Cases"):
+            test_cases = generator.generate_all_tests()
+            st.subheader("Generated Test Cases")
             st.json(test_cases)
 
-            # Option to download the test cases as JSON
-            st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", "application/json")
-
-            # Option to save the test cases as CSV
-            save_as_csv = st.checkbox("Save as CSV")
-            if save_as_csv:
-                save_test_cases_to_csv(test_cases)
-                st.success("Test cases saved as CSV!")
-
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error loading Swagger data: {e}")
-        except ValueError as e:
-            st.error(f"Error: {e}")  # This will handle errors like missing 'paths' or malformed data
-        except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+        if st.button("Generate Negative Test Cases"):
+            negative_test_cases = {}
+            for path, methods in loader.get_paths().items():
+                negative_test_cases[path] = {}
+                for method, details in methods.items():
+                    path_params, query_params = loader.get_parameters(path, method)
+                    negative_tests = negative_generator.generate_negative_tests(
+                        method, details, path_params, query_params
+                    )
+                    negative_test_cases[path][method] = negative_tests
+            st.subheader("Generated Negative Test Cases")
+            st.json(negative_test_cases)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")

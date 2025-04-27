@@ -23,23 +23,20 @@ class NegativeTestGenerator:
         """
         negative_tests = []
 
+        # Debug: Print method details
+        print(f"Generating tests for {endpoint} [{method_details['method']}]")
+
         # Step 1: Invalid payload structure (missing required fields)
         missing_field_tests = self._missing_required_fields(endpoint, method_details)
         if missing_field_tests:
-            negative_tests.append({
-                'endpoint': endpoint,
-                'method': method_details['method'],
-                'negative_tests': missing_field_tests
-            })
+            print(f"Found missing field tests for {endpoint}")
+            negative_tests.extend(missing_field_tests)
 
         # Step 2: Wrong data types
         wrong_data_type_tests = self._wrong_data_types(endpoint, method_details)
         if wrong_data_type_tests:
-            negative_tests.append({
-                'endpoint': endpoint,
-                'method': method_details['method'],
-                'negative_tests': wrong_data_type_tests
-            })
+            print(f"Found wrong data type tests for {endpoint}")
+            negative_tests.extend(wrong_data_type_tests)
 
         return negative_tests
 
@@ -76,7 +73,8 @@ class NegativeTestGenerator:
 
         # Generate initial empty payload based on schema
         initial_payload = self._generate_payload_from_schema(schema)
-        handle_missing_fields(initial_payload, required_fields)
+        if initial_payload:
+            handle_missing_fields(initial_payload, required_fields)
 
         return negative_tests
 
@@ -100,7 +98,8 @@ class NegativeTestGenerator:
 
         # Generate initial empty payload based on schema
         initial_payload = self._generate_payload_from_schema(schema)
-        handle_wrong_data_types(initial_payload, properties)
+        if initial_payload:
+            handle_wrong_data_types(initial_payload, properties)
 
         return negative_tests
 
@@ -113,7 +112,7 @@ class NegativeTestGenerator:
 
         if not properties:
             print(f"No properties in schema, can't generate payload.")
-            return payload
+            return None
 
         for field, field_details in properties.items():
             field_type = field_details.get("type", "")

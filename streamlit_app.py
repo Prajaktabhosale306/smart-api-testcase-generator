@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import requests
 from app.swagger_loader import load_swagger_from_url
-from app.test_generator import generate_test_cases
+from app.test_generator import TestGenerator  # Importing the correct class
 from app.utils import save_test_cases_to_json, save_test_cases_to_csv
 
 # Streamlit page configuration (must be the first command in the script)
@@ -21,9 +21,12 @@ if st.button("Generate Test Cases") and url:
     try:
         # Load Swagger data from the URL
         swagger_data = load_swagger_from_url(url)
-        
+
+        # Instantiate the TestGenerator class
+        test_generator = TestGenerator(swagger_data)
+
         # Generate test cases based on the Swagger data and user's choice
-        test_cases = generate_test_cases(swagger_data, generate_negative_tests)
+        test_cases = test_generator.generate_tests()
 
         # Show success message and number of test cases generated
         st.success(f"{len(test_cases)} test cases generated!")

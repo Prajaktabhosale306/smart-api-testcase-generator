@@ -11,39 +11,29 @@ class NegativeTestGenerator:
         self.swagger_data = swagger_data
 
     def generate_negative_tests_for_endpoint(self, endpoint, method_details):
-        """
-        Generate negative test cases for a given endpoint and method.
+    """
+    Generate negative test cases for a given endpoint and method.
+    Ensure no duplicate tests for the same endpoint and method.
+    """
+    negative_tests = []
+    # Avoid duplicate tests for the same method and endpoint
+    test_case_key = (endpoint, method_details.get('method'))
 
-        Args:
-            endpoint (str): API path like '/user/login'
-            method_details (dict): Details about POST/GET/PUT operation
+    if test_case_key not in self.generated_tests:
+        self.generated_tests.add(test_case_key)
 
-        Returns:
-            list: List of negative test case dictionaries
-        """
-        negative_tests = []
-
-        # Ensure 'method' is present in method_details
-        if 'method' not in method_details:
-            print(f"Error: 'method' key is missing for endpoint: {endpoint}")
-            return negative_tests
-
-        # Debug: Print method details
-        print(f"Generating tests for {endpoint} [{method_details['method']}]")
-
-        # Step 1: Invalid payload structure (missing required fields)
+        # Generate tests for this endpoint-method pair
+        print(f"Generating tests for {test_case_key}")
         missing_field_tests = self._missing_required_fields(endpoint, method_details)
-        if missing_field_tests:
-            print(f"Found missing field tests for {endpoint}")
-            negative_tests.extend(missing_field_tests)
-
-        # Step 2: Wrong data types
         wrong_data_type_tests = self._wrong_data_types(endpoint, method_details)
+
+        # Collect generated tests
+        if missing_field_tests:
+            negative_tests.extend(missing_field_tests)
         if wrong_data_type_tests:
-            print(f"Found wrong data type tests for {endpoint}")
             negative_tests.extend(wrong_data_type_tests)
 
-        return negative_tests
+    return negative_tests
 
     def _missing_required_fields(self, endpoint, method_details):
         """

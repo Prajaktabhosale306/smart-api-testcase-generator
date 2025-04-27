@@ -48,9 +48,22 @@ def debug_swagger_data(url):
     # Print the swagger data to help debug the issue
     print("Swagger Data Loaded Successfully:", swagger_data)
 
+    # Check the structure of the data to help debug
+    print("Checking structure of Swagger data:")
+    
+    # Check if paths exist
+    if 'paths' not in swagger_data:
+        print("No 'paths' key found in Swagger data!")
+    else:
+        print("Paths found:", swagger_data['paths'])
+
     # Try to extract paths from the swagger data
     try:
         paths = extract_paths(swagger_data)
         print("Paths Extracted Successfully:", paths)
     except ValueError as e:
         print(f"Error while extracting paths: {e}")
+
+# Example Usage
+url = 'https://api.example.com/swagger.json'  # Replace with your Swagger URL
+debug_swagger_data(url)

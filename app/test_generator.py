@@ -15,25 +15,24 @@ def generate_test_cases(swagger_data, swagger_loader):
 
             payload, required_fields = _extract_payload_and_required_fields(method_details, swagger_loader)
 
-            # Base Positive Test Case
+            positive_payload = payload.copy() if payload else {}
+
+            # Base Test Case
             test_case = {
                 "endpoint": path,
                 "method": method.upper(),
                 "description": method_details.get("summary", ""),
-                "payload": payload if payload else {},
+                "payload": payload,
                 "required_fields": required_fields,
-                "positive_test": _build_positive_test_case(payload),
+                "positive_test": positive_payload,
                 "negative_tests": []
             }
 
-            # Generate Negative Test Cases
-            negative_tests = negative_test_generator.generate_negative_tests(method, method_details)
-            for neg_test in negative_tests:
-                test_case["negative_tests"].append({
-                    "error_field": neg_test["error_field"],
-                    "payload": neg_test["payload"],
-                    "type": neg_test["type"],
-                })
+            # Generate Negative Test Cases (only if required fields exist)
+            if required_fields:
+                negative_tests = negative_test_generator.generate_negative_tests(payload, required_fields)
+                for neg in negative_tests:
+                    test_case["negative_tests"].append(neg)
 
             test_cases.append(test_case)
 
@@ -43,7 +42,7 @@ def _extract_payload_and_required_fields(method_details, swagger_loader):
     payload = {}
     required_fields = []
 
-    # Handle requestBody
+    # 1. Handle body payload
     request_body = method_details.get("requestBody", {})
     if request_body:
         content = request_body.get("content", {})
@@ -54,13 +53,13 @@ def _extract_payload_and_required_fields(method_details, swagger_loader):
             payload = _generate_payload_from_schema(schema, swagger_loader)
             required_fields = schema.get("required", [])
 
-    # Handle query/path parameters (for GET, DELETE also)
+    # 2. Handle query/path parameters
     parameters = method_details.get("parameters", [])
     for param in parameters:
         if param.get("in") in ["query", "path"]:
             param_name = param.get("name")
             required = param.get("required", False)
-            if required:
+            if required and param_name not in required_fields:
                 required_fields.append(param_name)
             payload[param_name] = _get_dummy_value(param.get("schema", {}).get("type", "string"))
 
@@ -84,16 +83,10 @@ def _generate_payload_from_schema(schema, swagger_loader):
 def _get_dummy_value(field_type):
     dummy_values = {
         "string": "sample",
-        "integer": 1,
-        "number": 1.1,
+        "integer": 123,
+        "number": 1.23,
         "boolean": True,
         "object": {},
         "array": []
     }
     return dummy_values.get(field_type, "sample")
-
-def _build_positive_test_case(payload):
-    if not payload:
-        return {}
-    # Create a separate copy for positive case
-    return payload.copy()

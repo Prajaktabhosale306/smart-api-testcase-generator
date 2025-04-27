@@ -14,7 +14,11 @@ def load_swagger_from_url(url):
     # Print the raw Swagger data to debug
     print("Raw Swagger Data:", swagger_data)
     
-    # Check for 'swagger' (for Swagger 2.0) and 'paths' keys
+    # Ensure 'swagger' and 'paths' exist in the Swagger specification
+    if not isinstance(swagger_data, dict):
+        raise ValueError("The Swagger data is not in the expected dictionary format.")
+    
+    # Check for 'swagger' key (Swagger 2.0) and 'paths' key
     if 'swagger' not in swagger_data:
         raise ValueError("'swagger' key not found in the Swagger specification.")
     
@@ -36,3 +40,17 @@ def extract_paths(swagger_data):
         raise ValueError("The 'paths' key is missing from the Swagger specification.")
     
     return swagger_data['paths']
+
+def debug_swagger_data(url):
+    # Load Swagger data from the URL
+    swagger_data = load_swagger_from_url(url)
+    
+    # Print the swagger data to help debug the issue
+    print("Swagger Data Loaded Successfully:", swagger_data)
+
+    # Try to extract paths from the swagger data
+    try:
+        paths = extract_paths(swagger_data)
+        print("Paths Extracted Successfully:", paths)
+    except ValueError as e:
+        print(f"Error while extracting paths: {e}")

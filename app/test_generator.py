@@ -1,5 +1,5 @@
-from app.utils import build_payload_from_schema, extract_required_fields
 from app.negative_test_generator import NegativeTestGenerator
+from app.utils import build_payload_from_schema, extract_required_fields
 
 def resolve_ref(schema, swagger_data):
     """

@@ -1,5 +1,6 @@
-import json
-from .negative_test_generator import NegativeTestGenerator  # Use relative import
+# app/test_generator.py
+
+from .negative_test_generator import NegativeTestGenerator
 
 class TestGenerator:
     def __init__(self, swagger_loader):
@@ -10,9 +11,6 @@ class TestGenerator:
     def generate_tests(self):
         """
         Generate all positive and negative test cases.
-
-        Returns:
-            list: Combined test cases.
         """
         positive_tests = self.generate_positive_tests()
         negative_tests = self.negative_generator.generate_negative_tests()
@@ -21,14 +19,11 @@ class TestGenerator:
     def generate_positive_tests(self):
         """
         Generate positive test cases based on Swagger data.
-        
-        Returns:
-            list: Positive test cases.
         """
         tests = []
         for path, path_data in self.swagger_spec.get("paths", {}).items():
             for operation, op_data in path_data.items():
-                if operation in ["get", "post", "put", "delete"]:  # Operations we want to generate tests for
+                if operation in ["get", "post", "put", "delete"]:
                     test_case = self.create_test_case(path, operation, op_data)
                     tests.append(test_case)
         return tests
@@ -36,14 +31,6 @@ class TestGenerator:
     def create_test_case(self, path, operation, op_data):
         """
         Create a test case based on operation data from the Swagger specification.
-        
-        Args:
-            path (str): The API path.
-            operation (str): HTTP operation (get, post, etc.).
-            op_data (dict): Operation data from the Swagger spec.
-        
-        Returns:
-            dict: A test case representation.
         """
         test_case = {
             "path": path,

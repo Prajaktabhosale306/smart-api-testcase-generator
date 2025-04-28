@@ -43,7 +43,7 @@ def main():
                 return
 
     if swagger_data:
-        loader = SwaggerLoader(swagger_data)
+        loader = load_swagger(swagger_data)
         generator = TestGenerator(loader)
         negative_generator = NegativeTestGenerator(loader)
 

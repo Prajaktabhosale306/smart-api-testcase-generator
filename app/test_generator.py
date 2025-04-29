@@ -1,6 +1,7 @@
 # app/test_generator.py
 
 from .negative_test_generator import NegativeTestGenerator
+from .assertion_logic import generate_basic_assertions  # NEW import
 
 class TestGenerator:
     def __init__(self, swagger_loader):
@@ -37,6 +38,7 @@ class TestGenerator:
             "operation": operation,
             "summary": op_data.get("summary", ""),
             "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {})
+            "responses": op_data.get("responses", {}),
+            "assertions": generate_basic_assertions(op_data)  # NEW line: Add basic assertions
         }
         return test_case

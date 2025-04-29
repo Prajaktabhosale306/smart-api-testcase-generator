@@ -1,7 +1,7 @@
 # app/test_generator.py
+from app.negative_test_generator import NegativeTestGenerator
+from app.assertion_logic import generate_basic_assertions
 
-from .negative_test_generator import NegativeTestGenerator
-from .assertion_logic import generate_basic_assertions  # NEW import
 
 class TestGenerator:
     def __init__(self, swagger_loader):

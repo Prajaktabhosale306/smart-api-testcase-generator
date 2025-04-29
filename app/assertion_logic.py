@@ -12,5 +12,12 @@ def generate_basic_assertions(op_data):
                     "expected": int(expected_status)
                 })
                 break
+        else:
+            # Handle if only 'default' success is available
+            if "default" in op_data["responses"]:
+                assertions.append({
+                    "type": "status_code",
+                    "expected": 200  # Assume 200 for 'default' success responses
+                })
 
     return assertions

@@ -3,23 +3,22 @@ import json
 import requests
 import csv
 from io import StringIO
+import importlib.util
+import subprocess
+import sys
 import spacy
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from spacy.util import is_package
-from spacy.cli import download
-
 from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
 
-# --- Load spaCy model safely ---
+# Load spaCy model safely for cloud environments
 MODEL_NAME = "en_core_web_sm"
-if not is_package(MODEL_NAME):
-    with st.spinner(f"Downloading spaCy model: {MODEL_NAME}..."):
-        download(MODEL_NAME)
+if importlib.util.find_spec(MODEL_NAME) is None:
+    subprocess.run([sys.executable, "-m", "pip", "install", MODEL_NAME])
 nlp = spacy.load(MODEL_NAME)
 
-# --- Load GPT-2 model and tokenizer ---
+# Load GPT-2
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
@@ -59,7 +58,7 @@ def generate_postman_collection(test_cases):
         collection['item'].append(item)
     return json.dumps(collection, indent=2)
 
-# --- NLP helper functions ---
+# NLP helper functions
 def generate_test_case(description):
     inputs = tokenizer.encode(description, return_tensors="pt")
     outputs = model.generate(inputs, max_length=100, num_return_sequences=1)
@@ -69,7 +68,6 @@ def extract_entities(test_description):
     doc = nlp(test_description)
     return [ent.text for ent in doc.ents]
 
-# --- Main Streamlit App ---
 def main():
     st.title("Smart API Test Case Generator 🚀")
 
@@ -114,10 +112,12 @@ def main():
 
         st.success("Swagger file loaded successfully!")
 
+        # Checkboxes for selecting test case types
         st.subheader("Select Test Case Types to Generate:")
         generate_positive = st.checkbox("Positive Test Cases", value=True)
         generate_negative = st.checkbox("Negative Test Cases")
 
+        # Add a new section for user input for NLP-based test case generation
         st.subheader("Enter Natural Language Test Case Description:")
         nl_description = st.text_area("Input test case description (e.g., 'Verify the user can log in successfully')")
 
@@ -148,6 +148,7 @@ def main():
                 combined_test_cases.extend(negative_tests)
 
             if combined_test_cases:
+                # Export options
                 st.subheader("📦 Export Test Cases")
                 st.download_button(
                     label="Download as JSON",
@@ -156,6 +157,7 @@ def main():
                     mime="application/json"
                 )
 
+                # CSV export
                 csv_data = generate_csv(combined_test_cases)
                 st.download_button(
                     label="Download as CSV",
@@ -164,6 +166,7 @@ def main():
                     mime="text/csv"
                 )
 
+                # Postman export
                 postman_data = generate_postman_collection(combined_test_cases)
                 st.download_button(
                     label="Download as Postman Collection",

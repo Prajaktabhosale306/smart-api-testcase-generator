@@ -1,9 +1,47 @@
 import streamlit as st
 import json
 import requests
+import csv
+from io import StringIO
 from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
+
+def generate_csv(test_cases):
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Path", "Method", "Summary", "Assertions"])
+    for test_case in test_cases:
+        path = test_case.get("path", "")
+        method = test_case.get("operation", "").upper()
+        summary = test_case.get("summary", "")
+        assertions = ", ".join([assertion.get("type", "") for assertion in test_case.get("assertions", [])])
+        writer.writerow([path, method, summary, assertions])
+    return output.getvalue()
+
+def generate_postman_collection(test_cases):
+    collection = {
+        "info": {
+            "name": "Generated Test Cases",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        },
+        "item": []
+    }
+    for test_case in test_cases:
+        item = {
+            "name": f"{test_case['operation'].upper()} {test_case['path']}",
+            "request": {
+                "method": test_case['operation'].upper(),
+                "url": {
+                    "raw": f"{{base_url}}{test_case['path']}",
+                    "host": ["{{base_url}}"],
+                    "path": test_case['path'].strip("/").split("/")
+                }
+            },
+            "response": []
+        }
+        collection['item'].append(item)
+    return json.dumps(collection, indent=2)
 
 def main():
     st.title("Smart API Test Case Generator 🚀")
@@ -70,11 +108,30 @@ def main():
                 combined_test_cases.extend(negative_tests)
 
             if combined_test_cases:
-                st.subheader("📦 Export Combined Test Cases")
+                # Export options
+                st.subheader("📦 Export Test Cases")
                 st.download_button(
                     label="Download as JSON",
                     data=json.dumps(combined_test_cases, indent=2),
                     file_name="test_cases.json",
+                    mime="application/json"
+                )
+
+                # CSV export
+                csv_data = generate_csv(combined_test_cases)
+                st.download_button(
+                    label="Download as CSV",
+                    data=csv_data,
+                    file_name="test_cases.csv",
+                    mime="text/csv"
+                )
+
+                # Postman export
+                postman_data = generate_postman_collection(combined_test_cases)
+                st.download_button(
+                    label="Download as Postman Collection",
+                    data=postman_data,
+                    file_name="test_cases_postman_collection.json",
                     mime="application/json"
                 )
             else:

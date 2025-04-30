@@ -1,7 +1,7 @@
 # app/test_generator.py
 from app.negative_test_generator import NegativeTestGenerator
 from app.assertion_logic import generate_basic_assertions
-
+from app.nlp_utils import generate_natural_test_name
 
 class TestGenerator:
     def __init__(self, swagger_loader):
@@ -42,3 +42,15 @@ class TestGenerator:
             "assertions": generate_basic_assertions(op_data)  # NEW line: Add basic assertions
         }
         return test_case
+    def create_test_case(self, path, operation, op_data):
+    summary = op_data.get("summary", "")
+    test_case = {
+        "path": path,
+        "operation": operation,
+        "summary": summary,
+        "natural_name": generate_natural_test_name(summary, path, operation),  # <-- New
+        "parameters": op_data.get("parameters", []),
+        "responses": op_data.get("responses", {}),
+        "assertions": generate_basic_assertions(op_data)
+    }
+    return test_case

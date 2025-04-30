@@ -1,5 +1,19 @@
-streamlit==1.44.1
-requests==2.32.3
-pandas==2.2.3
+# Core app dependencies
+streamlit>=1.30.0
+requests
+jsonschema
+
+# NLP support
+nltk
 spacy
 transformers
+torch
+
+# CSV & JSON handling
+pandas
+
+# Optional (for Swagger/OpenAPI schema parsing if needed)
+openapi-spec-validator
+
+# To support advanced NLP pipelines (optional but useful)
+scikit-learn

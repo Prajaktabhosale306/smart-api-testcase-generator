@@ -34,15 +34,18 @@ def generate_test_case(description):
         return "NLP model unavailable or failed to generate output."
 
 def generate_csv(test_cases):
-    output = StringIO()
+    output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Path", "Method", "Summary", "Assertions"])
+    headers = ["Path", "Method", "Summary", "Assertions"]
+    writer.writerow(headers)
+
     for test_case in test_cases:
         path = test_case.get("path", "")
         method = test_case.get("operation", "").upper()
         summary = test_case.get("summary", "")
-        assertions = ", ".join([a.get("type", "") for a in test_case.get("assertions", [])])
+        assertions = ", ".join(test_case.get("assertions", []))
         writer.writerow([path, method, summary, assertions])
+
     return output.getvalue()
 
 def generate_postman_collection(test_cases):

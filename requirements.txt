@@ -17,3 +17,6 @@ openapi-spec-validator
 
 # To support advanced NLP pipelines (optional but useful)
 scikit-learn
+
+# Premium NLP via ChatGPT API
+openai

@@ -1,7 +1,7 @@
-# app/test_generator.py
 from app.negative_test_generator import NegativeTestGenerator
 from app.assertion_logic import generate_basic_assertions
-from app.nlp_utils import generate_natural_test_name
+# Optional: Add NLP-based name generator if ready
+# from app.nlp_utils import generate_natural_test_name
 
 class TestGenerator:
     def __init__(self, swagger_loader):
@@ -10,17 +10,11 @@ class TestGenerator:
         self.negative_generator = NegativeTestGenerator(self.swagger_spec)
 
     def generate_tests(self):
-        """
-        Generate all positive and negative test cases.
-        """
         positive_tests = self.generate_positive_tests()
         negative_tests = self.negative_generator.generate_negative_tests()
         return positive_tests + negative_tests
 
     def generate_positive_tests(self):
-        """
-        Generate positive test cases based on Swagger data.
-        """
         tests = []
         for path, path_data in self.swagger_spec.get("paths", {}).items():
             for operation, op_data in path_data.items():
@@ -30,27 +24,14 @@ class TestGenerator:
         return tests
 
     def create_test_case(self, path, operation, op_data):
-        """
-        Create a test case based on operation data from the Swagger specification.
-        """
+        summary = op_data.get("summary", "")
         test_case = {
             "path": path,
             "operation": operation,
-            "summary": op_data.get("summary", ""),
+            "summary": summary,
+            # "natural_name": generate_natural_test_name(summary, path, operation),  # Enable later
             "parameters": op_data.get("parameters", []),
             "responses": op_data.get("responses", {}),
-            "assertions": generate_basic_assertions(op_data)  # NEW line: Add basic assertions
+            "assertions": generate_basic_assertions(op_data)
         }
         return test_case
-    def create_test_case(self, path, operation, op_data):
-    summary = op_data.get("summary", "")
-    test_case = {
-        "path": path,
-        "operation": operation,
-        "summary": summary,
-        "natural_name": generate_natural_test_name(summary, path, operation),  # <-- New
-        "parameters": op_data.get("parameters", []),
-        "responses": op_data.get("responses", {}),
-        "assertions": generate_basic_assertions(op_data)
-    }
-    return test_case

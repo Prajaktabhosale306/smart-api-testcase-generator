@@ -1,6 +1,7 @@
 from app.negative_test_generator import NegativeTestGenerator
 from app.assertion_logic import generate_basic_assertions
-from app.nlp_utils import generate_summary  # <-- New
+from app.nlp_utils import generate_summary  
+from app.descriptions import generate_test_case_summary
 
 class TestGenerator:
     def __init__(self, swagger_loader, use_premium_nlp=False):

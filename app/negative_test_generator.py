@@ -1,40 +1,45 @@
+from app.assertion_logic import generate_negative_assertions
+from app.payload_generator import generate_negative_payload
+from app.nlp_utils import generate_summary
+from app.descriptions import generate_test_case_summary
+
+
 class NegativeTestGenerator:
-    def __init__(self, swagger_spec):
+    def __init__(self, swagger_spec, use_premium_nlp=False, use_nlp_summary=False):
         self.swagger_spec = swagger_spec
+        self.use_premium_nlp = use_premium_nlp
+        self.use_nlp_summary = use_nlp_summary
 
     def generate_negative_tests(self):
-        """
-        Generate negative test cases based on Swagger data.
-        
-        Returns:
-            list: Negative test cases.
-        """
         negative_tests = []
+
         for path, path_data in self.swagger_spec.get("paths", {}).items():
             for operation, op_data in path_data.items():
-                if operation in ["get", "post", "put", "delete"]:  # Operations we want to generate tests for
-                    negative_test_case = self.create_negative_test_case(path, operation, op_data)
-                    negative_tests.append(negative_test_case)
+                if operation.lower() in ["get", "post", "put", "delete"]:
+                    test_case = self.create_negative_test_case(path, operation, op_data)
+                    negative_tests.append(test_case)
+
         return negative_tests
 
     def create_negative_test_case(self, path, operation, op_data):
-        """
-        Create a negative test case for the operation.
-        
-        Args:
-            path (str): The API path.
-            operation (str): HTTP operation (get, post, etc.).
-            op_data (dict): Operation data from the Swagger spec.
-        
-        Returns:
-            dict: A negative test case representation.
-        """
-        negative_test_case = {
+        test_case = {
             "path": path,
             "operation": operation,
-            "summary": f"Negative test for {op_data.get('summary', '')}",
             "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {}),
-            "expected_error": "400 Bad Request"  # Example negative test case
+            "responses": op_data.get("responses", {})
         }
-        return negative_test_case
+
+        # Generate invalid/missing/malformed payload
+        test_case["request_payload"] = generate_negative_payload(op_data)
+
+        # Summary (NLP or rule-based)
+        base_summary = op_data.get("summary", "")
+        if self.use_nlp_summary:
+            test_case["summary"] = generate_summary(f"Negative test for {base_summary}", path, operation, premium=self.use_premium_nlp)
+        else:
+            test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
+
+        # Assertions (like status code 400, expected error message, etc.)
+        test_case["assertions"] = generate_negative_assertions(op_data)
+
+        return test_case

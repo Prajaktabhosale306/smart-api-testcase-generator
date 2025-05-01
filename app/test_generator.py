@@ -26,27 +26,21 @@ class TestGenerator:
                     tests.append(test_case)
         return tests
 
-    def create_test_case(self, path, operation, op_data):
-        test_case = {
-            "path": path,
-            "operation": operation,
-            "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {}),
-        }
+   def create_test_case(self, path, operation, op_data):
+    test_case = {
+        "path": path,
+        "operation": operation,
+        "parameters": op_data.get("parameters", []),
+        "responses": op_data.get("responses", {})
+    }
 
-        if self.use_nlp_summary:
-            base_summary = op_data.get("summary", "")
-            summary = generate_summary(base_summary, path, operation, premium=self.use_premium_nlp)
-        else:
-            test_case["summary"] = generate_test_case_summary({
-                "path": path,
-                "operation": operation,
-                "parameters": test_case["parameters"],
-                "responses": test_case["responses"]
-            })
-            summary = test_case["summary"]
+    if self.use_nlp_summary:
+        base_summary = op_data.get("summary", "")
+        test_case["summary"] = generate_summary(base_summary, path, operation, premium=self.use_premium_nlp)
+    else:
+        test_case["summary"] = generate_test_case_summary(test_case)
 
-        test_case["summary"] = summary
-        test_case["assertions"] = generate_basic_assertions(op_data)
+    test_case["assertions"] = generate_basic_assertions(op_data)
 
-        return test_case
+    return test_case
+

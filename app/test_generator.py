@@ -1,7 +1,7 @@
 from app.negative_test_generator import NegativeTestGenerator
 from app.assertion_logic import generate_basic_assertions
 from app.nlp_utils import generate_summary  # For NLP-based summaries
-from app.descriptions import generate_test_case_summary  # For rule-based professional summaries
+from app.descriptions import generate_test_case_summary # For rule-based professional summaries
 
 
 class TestGenerator:

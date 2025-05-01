@@ -1,4 +1,4 @@
-def generate_human_readable_summary(test_case):
+def generate_test_case_summary(test_case):
     """
     Generate a human-readable and dynamic summary for each test case.
     """

@@ -1,7 +1,7 @@
 # app/test_generator.py
 
 from typing import List, Dict, Any
-from app.swagger_loader import load_spec, get_paths
+from app.swagger_loader import SwaggerLoader
 from app.payload_builder import generate_payload
 from app.param_extractor import get_query_params
 from app.assertion_builder import (
@@ -17,8 +17,10 @@ def generate_test_cases(spec_input: Any) -> List[Dict[str, Any]]:
     Main function to generate structured test cases from an OpenAPI spec.
     Returns a list of test case dicts.
     """
-    spec = load_spec(spec_input)
-    paths = get_paths(spec)
+    # Use the SwaggerLoader class
+    swagger_loader = SwaggerLoader(spec_input)
+    spec = swagger_loader.spec  # This holds the loaded spec
+    paths = swagger_loader.get_paths()  # This gets the 'paths' section of the spec
 
     test_cases = []
 

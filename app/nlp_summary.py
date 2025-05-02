@@ -1,4 +1,4 @@
-def generate_summary(summary, path, operation, premium=False):
+def generate_test_summary(summary, path, operation, premium=False):
     if premium:
         return generate_summary_chatgpt(summary, path, operation)
     else:

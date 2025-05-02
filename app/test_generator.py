@@ -4,10 +4,7 @@ from typing import List, Dict, Any
 from app.swagger_loader import SwaggerLoader
 from app.payload_builder import generate_payload
 from app.param_extractor import get_query_params
-from app.assertion_builder import (
-    build_positive_assertions,
-    build_negative_assertions
-)
+from app.assertion_logic import build_positive_assertions, build_negative_assertions
 from app.utils import sanitize_test_case_name
 from app.nlp_summary import generate_test_summary
 

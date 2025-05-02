@@ -8,73 +8,77 @@ from app.assertion_logic import build_positive_assertions, build_negative_assert
 from app.utils import sanitize_test_case_name
 from app.nlp_summary import generate_test_summary
 
+class TestGenerator:
+    def __init__(self, spec_input: Any):
+        """
+        Initializes the TestGenerator with the provided OpenAPI spec input.
+        """
+        # Use the SwaggerLoader class to load the spec
+        self.swagger_loader = SwaggerLoader(spec_input)
+        self.spec = self.swagger_loader.spec  # This holds the loaded spec
+        self.paths = self.swagger_loader.get_paths()  # This gets the 'paths' section of the spec
 
-def generate_test_cases(spec_input: Any) -> List[Dict[str, Any]]:
-    """
-    Main function to generate structured test cases from an OpenAPI spec.
-    Returns a list of test case dicts.
-    """
-    # Use the SwaggerLoader class
-    swagger_loader = SwaggerLoader(spec_input)
-    spec = swagger_loader.spec  # This holds the loaded spec
-    paths = swagger_loader.get_paths()  # This gets the 'paths' section of the spec
+    def generate_test_cases(self) -> List[Dict[str, Any]]:
+        """
+        Main function to generate structured test cases from an OpenAPI spec.
+        Returns a list of test case dicts.
+        """
+        test_cases = []
 
-    test_cases = []
+        for path, methods in self.paths.items():
+            for method, operation in methods.items():
+                operation_id = operation.get("operationId", f"{method}_{path}")
+                summary = operation.get("summary", f"{method.upper()} {path}")
 
-    for path, methods in paths.items():
-        for method, operation in methods.items():
-            operation_id = operation.get("operationId", f"{method}_{path}")
-            summary = operation.get("summary", f"{method.upper()} {path}")
+                # Payload generation
+                request_body_schema = (
+                    operation.get("requestBody", {})
+                    .get("content", {})
+                    .get("application/json", {})
+                    .get("schema", {})
+                )
 
-            # Payload generation
-            request_body_schema = (
-                operation.get("requestBody", {})
-                .get("content", {})
-                .get("application/json", {})
-                .get("schema", {})
-            )
+                request_payload = generate_payload(request_body_schema, self.spec) if request_body_schema else {}
 
-            request_payload = generate_payload(request_body_schema, spec) if request_body_schema else {}
+                # Query/path param extraction
+                params = get_query_params(operation)
 
-            # Query/path param extraction
-            params = get_query_params(operation)
+                # Assertions
+                success_response = (
+                    operation.get("responses", {}).get("200") or
+                    operation.get("responses", {}).get("201") or
+                    operation.get("responses", {}).get("default")
+                )
+                response_schema = (
+                    success_response.get("content", {})
+                    .get("application/json", {})
+                    .get("schema", {})
+                    if success_response else {}
+                )
 
-            # Assertions
-            success_response = (
-                operation.get("responses", {}).get("200") or
-                operation.get("responses", {}).get("201") or
-                operation.get("responses", {}).get("default")
-            )
-            response_schema = (
-                success_response.get("content", {})
-                .get("application/json", {})
-                .get("schema", {})
-                if success_response else {}
-            )
+                positive_asserts = build_positive_assertions(response_schema, self.spec)
+                negative_asserts = build_negative_assertions(operation)
 
-            positive_asserts = build_positive_assertions(response_schema, spec)
-            negative_asserts = build_negative_assertions(operation)
+                # NLP-based test summary
+                test_name = generate_test_summary({
+                    "method": method,
+                    "path": path,
+                    "params": params,
+                    "payload": request_payload
+                })
 
-            # NLP-based test summary
-            test_name = generate_test_summary({
-                "method": method,
-                "path": path,
-                "params": params,
-                "payload": request_payload
-            })
+                test_case = {
+                    "name": sanitize_test_case_name(test_name),
+                    "description": test_name,
+                    "method": method.upper(),
+                    "path": path,
+                    "params": params,
+                    "payload": request_payload,
+                    "positive_assertions": positive_asserts,
+                    "negative_assertions": negative_asserts,
+                    "tags": operation.get("tags", [])
+                }
 
-            test_case = {
-                "name": sanitize_test_case_name(test_name),
-                "description": test_name,
-                "method": method.upper(),
-                "path": path,
-                "params": params,
-                "payload": request_payload,
-                "positive_assertions": positive_asserts,
-                "negative_assertions": negative_asserts,
-                "tags": operation.get("tags", [])
-            }
+                test_cases.append(test_case)
 
-            test_cases.append(test_case)
-
-    return test_cases
+        return test_cases

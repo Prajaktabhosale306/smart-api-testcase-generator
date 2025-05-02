@@ -1,79 +1,81 @@
-# Updated TestGenerator class with unified positive and negative test generation
+# app/test_generator.py
 
-from app.negative_test_generator import NegativeTestGenerator
-from app.assertion_logic import generate_basic_assertions
-from app.payload_generator import generate_payload, generate_negative_payload
-from app.nlp_utils import generate_summary
-from app.descriptions import generate_test_case_summary
+from typing import List, Dict, Any
+from app.swagger_loader import load_spec, get_paths
+from app.payload_builder import generate_payload
+from app.param_extractor import get_query_params
+from app.assertion_builder import (
+    build_positive_assertions,
+    build_negative_assertions
+)
+from app.utils import sanitize_test_case_name
+from app.nlp_summary import generate_test_summary
 
 
-class TestGenerator:
-    def __init__(self, swagger_loader, use_premium_nlp=False, use_nlp_summary=False):
-        self.swagger_loader = swagger_loader
-        self.swagger_spec = swagger_loader.swagger_data
-        self.negative_generator = NegativeTestGenerator(self.swagger_spec)
-        self.use_premium_nlp = use_premium_nlp
-        self.use_nlp_summary = use_nlp_summary
+def generate_test_cases(spec_input: Any) -> List[Dict[str, Any]]:
+    """
+    Main function to generate structured test cases from an OpenAPI spec.
+    Returns a list of test case dicts.
+    """
+    spec = load_spec(spec_input)
+    paths = get_paths(spec)
 
-    def generate_tests(self):
-        # Generate both positive and negative test cases
-        positive_tests = self._generate_positive_tests()
-        negative_tests = self._generate_negative_tests()
-        return positive_tests + negative_tests
+    test_cases = []
 
-    def _generate_positive_tests(self):
-        tests = []
-        for path, path_data in self.swagger_spec.get("paths", {}).items():
-            for operation, op_data in path_data.items():
-                if operation.lower() in ["get", "post", "put", "delete"]:
-                    test_case = self._create_test_case(path, operation, op_data)
-                    tests.append(test_case)
-        return tests
+    for path, methods in paths.items():
+        for method, operation in methods.items():
+            operation_id = operation.get("operationId", f"{method}_{path}")
+            summary = operation.get("summary", f"{method.upper()} {path}")
 
-    def _generate_negative_tests(self):
-        tests = []
-        for path, path_data in self.swagger_spec.get("paths", {}).items():
-            for operation, op_data in path_data.items():
-                if operation.lower() in ["get", "post", "put", "delete"]:
-                    test_case = self._create_negative_test_case(path, operation, op_data)
-                    tests.append(test_case)
-        return tests
+            # Payload generation
+            request_body_schema = (
+                operation.get("requestBody", {})
+                .get("content", {})
+                .get("application/json", {})
+                .get("schema", {})
+            )
 
-    def _create_test_case(self, path, operation, op_data):
-        test_case = {
-            "path": path,
-            "operation": operation,
-            "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {}),
-        }
+            request_payload = generate_payload(request_body_schema, spec) if request_body_schema else {}
 
-        base_summary = op_data.get("summary", "")
-        if self.use_nlp_summary:
-            test_case["summary"] = generate_summary(base_summary, path, operation, premium=self.use_premium_nlp)
-        else:
-            test_case["summary"] = generate_test_case_summary(test_case)
+            # Query/path param extraction
+            params = get_query_params(operation)
 
-        test_case["payload"] = generate_payload(op_data)
-        test_case["assertions"] = generate_basic_assertions(op_data)
+            # Assertions
+            success_response = (
+                operation.get("responses", {}).get("200") or
+                operation.get("responses", {}).get("201") or
+                operation.get("responses", {}).get("default")
+            )
+            response_schema = (
+                success_response.get("content", {})
+                .get("application/json", {})
+                .get("schema", {})
+                if success_response else {}
+            )
 
-        return test_case
+            positive_asserts = build_positive_assertions(response_schema, spec)
+            negative_asserts = build_negative_assertions(operation)
 
-    def _create_negative_test_case(self, path, operation, op_data):
-        test_case = {
-            "path": path,
-            "operation": operation,
-            "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {}),
-        }
+            # NLP-based test summary
+            test_name = generate_test_summary({
+                "method": method,
+                "path": path,
+                "params": params,
+                "payload": request_payload
+            })
 
-        base_summary = f"Negative test case for {operation.upper()} {path} with invalid input"
-        if self.use_nlp_summary:
-            test_case["summary"] = generate_summary(base_summary, path, operation, premium=self.use_premium_nlp)
-        else:
-            test_case["summary"] = generate_test_case_summary(test_case)
+            test_case = {
+                "name": sanitize_test_case_name(test_name),
+                "description": test_name,
+                "method": method.upper(),
+                "path": path,
+                "params": params,
+                "payload": request_payload,
+                "positive_assertions": positive_asserts,
+                "negative_assertions": negative_asserts,
+                "tags": operation.get("tags", [])
+            }
 
-        test_case["payload"] = generate_negative_payload(op_data)
-        test_case["assertions"] = generate_basic_assertions(op_data, negative=True)
+            test_cases.append(test_case)
 
-        return test_case
-
+    return test_cases

@@ -4,7 +4,7 @@ import json
 import requests
 import csv
 from io import StringIO
-from app.swagger_loader import load_spec, get_paths, get_components, resolve_all_refs_in_spec
+from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
 

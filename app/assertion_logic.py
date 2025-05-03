@@ -14,7 +14,7 @@ def build_positive_assertions(response_schema: Dict[str, Any], spec: Dict[str, A
         })
     return assertions
 
-def build_negative_assertions(operation: Dict[str, Any]) -> List[Dict[str, Any]]:
+def generate_negative_assertions(operation: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Builds negative assertions for error cases in the operation.
     """

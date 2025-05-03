@@ -3,12 +3,10 @@ import streamlit as st
 import json
 import requests
 import csv
-from io import StringIO
-from app.swagger_loader import SwaggerLoader
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
 
-# Load spaCy model (for Free mode)
+# Load spaCy model (Free mode)
 def load_spacy_model():
     try:
         import spacy
@@ -20,7 +18,7 @@ def load_spacy_model():
         except:
             return None
 
-# Premium mode using GPT2 (you can replace with ChatGPT API later)
+# Premium mode using GPT2
 def generate_test_case_gpt(description):
     try:
         from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -49,14 +47,14 @@ def generate_csv(test_cases):
     headers = ["Path", "Method", "Summary", "Assertions"]
     writer.writerow(headers)
 
-    for test_case in test_cases:
-        path = test_case.get("path", "")
-        method = test_case.get("operation", "").upper()
-        summary = test_case.get("summary", "")
-        assertions = test_case.get("assertions", [])
-        if isinstance(assertions, list):
-            assertions = ", ".join(assertions) if assertions and isinstance(assertions[0], str) else json.dumps(assertions)
-        writer.writerow([path, method, summary, assertions])
+    for tc in test_cases:
+        assertions = tc.get("positive_assertions", []) + tc.get("negative_assertions", [])
+        writer.writerow([
+            tc.get("path", ""),
+            tc.get("method", ""),
+            tc.get("description", ""),
+            ", ".join(assertions) if assertions else "N/A"
+        ])
 
     return output.getvalue()
 
@@ -69,27 +67,27 @@ def generate_postman_collection(test_cases):
         },
         "item": []
     }
-    for test_case in test_cases:
-        item = {
-            "name": f"{test_case['operation'].upper()} {test_case['path']}",
+
+    for tc in test_cases:
+        collection["item"].append({
+            "name": f"{tc['method']} {tc['path']}",
             "request": {
-                "method": test_case['operation'].upper(),
+                "method": tc["method"],
                 "url": {
-                    "raw": f"{{base_url}}{test_case['path']}",
+                    "raw": f"{{base_url}}{tc['path']}",
                     "host": ["{{base_url}}"],
-                    "path": test_case['path'].strip("/").split("/")
+                    "path": tc["path"].strip("/").split("/")
                 }
             },
             "response": []
-        }
-        collection['item'].append(item)
+        })
+
     return json.dumps(collection, indent=2)
 
-# Streamlit app
+# Streamlit App
 def main():
     st.title("Smart API Test Case Generator 🚀")
 
-    st.subheader("Choose Input Method:")
     input_method = st.radio("Swagger/OpenAPI input via:", ("Upload JSON File", "Enter URL"))
     swagger_data = None
 
@@ -114,10 +112,13 @@ def main():
                 return
 
     if swagger_data:
-        loader = SwaggerLoader(swagger_data)
-        generator = TestGenerator(loader)
-        negative_generator = NegativeTestGenerator(loader.swagger_data)
-        st.success("Swagger loaded!")
+        try:
+            generator = TestGenerator(swagger_data)
+            negative_generator = NegativeTestGenerator(swagger_data)
+            st.success("Swagger loaded successfully!")
+        except Exception as e:
+            st.error(f"Failed to initialize generator: {e}")
+            return
 
         generate_positive = st.checkbox("Generate Positive Test Cases", value=True)
         generate_negative = st.checkbox("Generate Negative Test Cases")
@@ -131,20 +132,22 @@ def main():
 
             if nl_description:
                 st.markdown("#### ✨ NLP Summary")
-                if nlp_mode == "Premium (ChatGPT/GPT-2)":
-                    result = generate_test_case_gpt(nl_description)
-                else:
-                    result = generate_test_case_spacy(nl_description)
+                result = (
+                    generate_test_case_gpt(nl_description)
+                    if nlp_mode == "Premium (ChatGPT/GPT-2)"
+                    else generate_test_case_spacy(nl_description)
+                )
                 st.code(result)
                 test_cases.append({
                     "path": "/nlp/generated",
-                    "operation": "POST",
-                    "summary": result,
-                    "assertions": ["pm.response.to.have.status(200)"]
+                    "method": "POST",
+                    "description": result,
+                    "positive_assertions": ["pm.response.to.have.status(200)"],
+                    "negative_assertions": []
                 })
 
             if generate_positive:
-                pos = generator.generate_positive_tests()
+                pos = generator.generate_test_cases()
                 st.markdown("### ✅ Positive Test Cases")
                 st.json(pos)
                 test_cases.extend(pos)
@@ -161,7 +164,7 @@ def main():
                 st.download_button("Download CSV", generate_csv(test_cases), "test_cases.csv")
                 st.download_button("Download Postman", generate_postman_collection(test_cases), "postman_collection.json")
             else:
-                st.info("No test cases to export.")
+                st.info("No test cases generated.")
 
 if __name__ == "__main__":
     main()

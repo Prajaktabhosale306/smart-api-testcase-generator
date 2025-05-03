@@ -1,5 +1,3 @@
-# app/assertion_logic.py
-
 from typing import Dict, Any, List
 
 def build_positive_assertions(response_schema: Dict[str, Any], spec: Dict[str, Any]) -> List[Dict[str, Any]]:

@@ -1,5 +1,5 @@
 from app.assertion_logic import build_negative_assertions
-from app.payload_generator import generate_negative_payload
+from app.payload_builder import generate_negative_payload
 from app.nlp_utils import generate_summary
 from app.descriptions import generate_test_case_summary
 

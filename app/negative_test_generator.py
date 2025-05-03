@@ -40,6 +40,6 @@ class NegativeTestGenerator:
             test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
 
         # Assertions (like status code 400, expected error message, etc.)
-        test_case["assertions"] = generate_negative_assertions(op_data)
+        test_case["assertions"] = build_negative_assertions(op_data)
 
         return test_case

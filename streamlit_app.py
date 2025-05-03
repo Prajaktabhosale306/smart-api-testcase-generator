@@ -48,7 +48,14 @@ def generate_csv(test_cases):
     writer.writerow(headers)
 
     for tc in test_cases:
-        assertions = tc.get("positive_assertions", []) + tc.get("negative_assertions", [])
+        # Safely get positive and negative assertions
+        positive_assertions = tc.get("positive_assertions", [])
+        negative_assertions = tc.get("negative_assertions", [])
+        
+        # Combine assertions
+        assertions = positive_assertions + negative_assertions
+        
+        # Write the row to the CSV
         writer.writerow([
             tc.get("path", ""),
             tc.get("method", ""),

@@ -1,43 +1,55 @@
-# app/swagger_loader.py
-
 import json
 import requests
 from typing import Any, Dict, Union
 from app.utils import resolve_ref
 
+try:
+    import yaml  # For YAML support
+except ImportError:
+    yaml = None
+
+
 class SwaggerLoader:
     def __init__(self, source: Union[str, Dict[str, Any]]):
         self.spec = self.load_spec(source)
-    
+        self.spec = self.resolve_all_refs_in_spec()  # Optionally expand $ref
+
     def load_spec(self, source: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
         Loads OpenAPI/Swagger spec from a URL, file path, or raw dict.
         """
         if isinstance(source, dict):
             return source
-        elif source.startswith("http://") or source.startswith("https://"):
-            response = requests.get(source)
-            response.raise_for_status()
-            return response.json()
+
+        elif isinstance(source, str):
+            if source.startswith("http://") or source.startswith("https://"):
+                response = requests.get(source)
+                response.raise_for_status()
+                return response.json()
+            else:
+                with open(source, "r", encoding="utf-8") as f:
+                    if source.endswith((".yaml", ".yml")) and yaml:
+                        return yaml.safe_load(f)
+                    else:
+                        return json.load(f)
         else:
-            with open(source, "r", encoding="utf-8") as f:
-                return json.load(f)
+            raise TypeError(f"Unsupported spec input type: {type(source)}")
 
     def get_paths(self) -> Dict[str, Any]:
         """
-        Returns the 'paths' section of the OpenAPI spec.
+        Returns the 'paths' section of the OpenAPI spec (with resolved $refs).
         """
         return self.spec.get("paths", {})
 
     def get_components(self) -> Dict[str, Any]:
         """
-        Returns the 'components' section of the OpenAPI spec.
+        Returns the 'components' section of the OpenAPI spec (with resolved $refs).
         """
         return self.spec.get("components", {})
 
     def resolve_all_refs_in_spec(self) -> Dict[str, Any]:
         """
-        Optional: You can expand and resolve all $ref objects in the spec recursively.
+        Recursively resolves all $ref references in the OpenAPI spec.
         """
         def _resolve(obj: Any) -> Any:
             if isinstance(obj, dict):

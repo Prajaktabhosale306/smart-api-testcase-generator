@@ -55,12 +55,12 @@ class TestGenerator:
                 negative_asserts = build_negative_assertions(operation)
 
                 # NLP-based test case summary
-                test_name = generate_test_summary({
-                    "method": method,
-                    "path": path,
-                    "params": params,
-                    "payload": request_payload
-                })
+                test_name = generate_test_summary(
+                    summary=operation.get("summary", f"{method.upper()} {path}"),
+                    path=path,
+                    operation=method,
+                    premium=False  # Set to True for ChatGPT-based summary
+                )
 
                 # Final structured test case
                 test_case = {

@@ -7,29 +7,36 @@ def export_to_json(test_cases, filename="test_cases.json"):
         json.dump(test_cases, f, indent=2)
 
 # Export to CSV
-def export_to_csv(test_cases, filename="test_cases.csv"):
-    with open(filename, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Path", "Method", "Summary", "Parameters", "Assertions", "Expected Status Codes"])
+def generate_csv(test_cases):
+    # Initialize an in-memory CSV output
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Path", "Method", "Summary", "Parameters", "Assertions", "Expected Status Codes"])
+
+    for case in test_cases:
+        # Safely handle parameters and assertions
+        parameters = ", ".join([f"{p['name']}({p['in']})" for p in case.get("parameters", [])]) if case.get("parameters") else "N/A"
         
-        for case in test_cases:
-            # Handle missing or empty 'parameters' gracefully
-            parameters = ", ".join([f"{p['name']}({p['in']})" for p in case.get("parameters", [])]) if case.get("parameters") else "N/A"
-            
-            # Handle 'assertions' gracefully (empty list if missing)
-            assertions = ", ".join([a["type"] for a in case.get("assertions", [])]) if case.get("assertions") else "N/A"
-            
-            # Handle 'responses' gracefully (empty string if missing status codes)
-            status_codes = ", ".join([str(code) for code in case.get("responses", {}).keys()]) if case.get("responses") else "N/A"
-            
-            writer.writerow([
-                case["path"],
-                case["operation"],
-                case.get("summary", ""),
-                parameters,
-                assertions,
-                status_codes
-            ])
+        # Ensure assertions is treated as a list (default to empty if None)
+        assertions = ", ".join([a["type"] for a in case.get("assertions", [])]) if case.get("assertions") else "N/A"
+        
+        # Safely handle responses for status codes
+        status_codes = ", ".join([str(code) for code in case.get("responses", {}).keys()]) if case.get("responses") else "N/A"
+        
+        writer.writerow([
+            case["path"],
+            case["operation"],
+            case.get("summary", ""),
+            parameters,
+            assertions,
+            status_codes
+        ])
+
+    # Seek the start of the StringIO stream to be read
+    output.seek(0)
+    return output.getvalue()
+
 
 # Export to Postman collection
 def export_to_postman(test_cases, filename="postman_collection.json", base_url="http://localhost"):

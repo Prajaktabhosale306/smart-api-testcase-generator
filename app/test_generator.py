@@ -1,5 +1,3 @@
-# app/test_generator.py
-
 from typing import List, Dict, Any
 from app.swagger_loader import SwaggerLoader
 from app.payload_builder import generate_payload
@@ -8,47 +6,43 @@ from app.assertion_logic import build_positive_assertions, build_negative_assert
 from app.utils import sanitize_test_case_name
 from app.nlp_summary import generate_test_summary
 
+
 class TestGenerator:
     def __init__(self, spec_input: Any):
         """
         Initializes the TestGenerator with the provided OpenAPI spec input.
+        Accepts dict, URL, or file path.
         """
-        # Use the SwaggerLoader class to load the spec
         self.swagger_loader = SwaggerLoader(spec_input)
-        self.spec = self.swagger_loader.spec  # This holds the loaded spec
-        self.paths = self.swagger_loader.get_paths()  # This gets the 'paths' section of the spec
+        self.spec = self.swagger_loader.spec
+        self.paths = self.swagger_loader.get_paths()
 
     def generate_test_cases(self) -> List[Dict[str, Any]]:
-        """
-        Main function to generate structured test cases from an OpenAPI spec.
-        Returns a list of test case dicts.
-        """
         test_cases = []
 
         for path, methods in self.paths.items():
             for method, operation in methods.items():
+                if method.lower() not in ["get", "post", "put", "delete", "patch"]:
+                    continue  # Skip unsupported methods
+
                 operation_id = operation.get("operationId", f"{method}_{path}")
                 summary = operation.get("summary", f"{method.upper()} {path}")
 
-                # Payload generation
+                # Request payload schema
                 request_body_schema = (
                     operation.get("requestBody", {})
                     .get("content", {})
                     .get("application/json", {})
                     .get("schema", {})
                 )
-
                 request_payload = generate_payload(request_body_schema, self.spec) if request_body_schema else {}
 
-                # Query/path param extraction
+                # Extract query/path parameters
                 params = get_query_params(operation)
 
-                # Assertions
-                success_response = (
-                    operation.get("responses", {}).get("200") or
-                    operation.get("responses", {}).get("201") or
-                    operation.get("responses", {}).get("default")
-                )
+                # Success response schema (200, 201, or default)
+                responses = operation.get("responses", {})
+                success_response = responses.get("200") or responses.get("201") or responses.get("default")
                 response_schema = (
                     success_response.get("content", {})
                     .get("application/json", {})
@@ -56,10 +50,11 @@ class TestGenerator:
                     if success_response else {}
                 )
 
+                # Generate assertions
                 positive_asserts = build_positive_assertions(response_schema, self.spec)
                 negative_asserts = build_negative_assertions(operation)
 
-                # NLP-based test summary
+                # NLP-based test case summary
                 test_name = generate_test_summary({
                     "method": method,
                     "path": path,
@@ -67,6 +62,7 @@ class TestGenerator:
                     "payload": request_payload
                 })
 
+                # Final structured test case
                 test_case = {
                     "name": sanitize_test_case_name(test_name),
                     "description": test_name,

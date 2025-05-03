@@ -5,6 +5,7 @@ import requests
 import csv
 from app.test_generator import TestGenerator
 from app.negative_test_generator import NegativeTestGenerator
+from app.exporter import generate_csv, generate_postman_collection
 
 # Load spaCy model (Free mode)
 def load_spacy_model():

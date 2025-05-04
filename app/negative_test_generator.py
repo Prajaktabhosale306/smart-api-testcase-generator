@@ -3,7 +3,6 @@ from app.payload_builder import generate_negative_payload
 from app.nlp_summary import generate_test_summary
 from app.descriptions import generate_test_case_summary
 
-
 class NegativeTestGenerator:
     def __init__(self, swagger_spec, use_premium_nlp=False, use_nlp_summary=False):
         self.swagger_spec = swagger_spec
@@ -35,8 +34,10 @@ class NegativeTestGenerator:
         # Summary (NLP or rule-based)
         base_summary = op_data.get("summary", "")
         if self.use_nlp_summary:
-            test_case["summary"] = generate_summary(f"Negative test for {base_summary}", path, operation, premium=self.use_premium_nlp)
+            # Use the new `generate_test_summary` for NLP-based summary
+            test_case["summary"] = generate_test_summary(f"Negative test for {base_summary}", path, operation, premium=self.use_premium_nlp)
         else:
+            # Fallback to rule-based summary
             test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
 
         # Assertions (like status code 400, expected error message, etc.)

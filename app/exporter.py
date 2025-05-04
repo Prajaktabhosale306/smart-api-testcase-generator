@@ -33,12 +33,17 @@ def generate_postman_collection(test_cases, base_url="http://localhost"):
     }
 
     for case in test_cases:
-        path = case["path"]
-        method = case["operation"].lower()
+        path = case.get("path", "")
+        operation = case.get("operation", "").lower()
+        
+        # Ensure that 'operation' is a valid HTTP method (GET, POST, etc.)
+        if operation not in ["get", "post", "put", "delete", "patch", "options", "head"]:
+            continue  # Skip invalid operation types
+
         item = {
-            "name": f"{method.upper()} {path}",
+            "name": f"{operation.upper()} {path}",
             "request": {
-                "method": method.upper(),
+                "method": operation.upper(),
                 "header": [],
                 "url": {
                     "raw": f"{base_url}{path}",
@@ -56,13 +61,18 @@ def generate_postman_collection(test_cases, base_url="http://localhost"):
                     tests.append(
                         f'pm.test("Status code is {assertion["expected"]}", function () {{ pm.response.to.have.status({assertion["expected"]}); }});'
                     )
-            item["event"] = [{
-                "listen": "test",
-                "script": {
-                    "type": "text/javascript",
-                    "exec": tests
-                }
-            }]
+                # Add more assertion types here (e.g., schema validation)
+                # if assertion["type"] == "schema":
+                #     tests.append(f'pm.test("Schema is valid", function () {{ pm.response.to.have.jsonSchema({assertion["expected"]}); }});')
+
+            if tests:
+                item["event"] = [{
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": tests
+                    }
+                }]
         
         collection["item"].append(item)
 

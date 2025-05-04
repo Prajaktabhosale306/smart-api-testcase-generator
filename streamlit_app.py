@@ -48,57 +48,6 @@ def generate_test_case_spacy(description):
     entities = [f"{ent.label_}: {ent.text}" for ent in doc.ents]
     return f"Detected entities ➤ {', '.join(entities) if entities else 'None found'}"
 
-# CSV export
-def generate_csv(test_cases):
-    output = io.StringIO()
-    writer = csv.writer(output)
-    headers = ["Path", "Method", "Summary", "Assertions"]
-    writer.writerow(headers)
-
-    for tc in test_cases:
-        # Safely get positive and negative assertions
-        positive_assertions = tc.get("positive_assertions", [])
-        negative_assertions = tc.get("negative_assertions", [])
-        
-        # Combine assertions
-        assertions = positive_assertions + negative_assertions
-        
-        # Write the row to the CSV
-        writer.writerow([
-            tc.get("path", ""),
-            tc.get("method", ""),
-            tc.get("description", ""),
-            ", ".join(assertions) if assertions else "N/A"
-        ])
-
-    return output.getvalue()
-
-# Postman collection export
-def generate_postman_collection(test_cases):
-    collection = {
-        "info": {
-            "name": "Generated Test Cases",
-            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-        },
-        "item": []
-    }
-
-    for tc in test_cases:
-        collection["item"].append({
-            "name": f"{tc['method']} {tc['path']}",
-            "request": {
-                "method": tc["method"],
-                "url": {
-                    "raw": f"{{base_url}}{tc['path']}",
-                    "host": ["{{base_url}}"],
-                    "path": tc["path"].strip("/").split("/")
-                }
-            },
-            "response": []
-        })
-
-    return json.dumps(collection, indent=2)
-
 # Streamlit App
 def main():
     st.title("Smart API Test Case Generator 🚀")

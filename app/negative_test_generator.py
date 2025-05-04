@@ -1,7 +1,6 @@
 from app.assertion_logic import build_negative_assertions
 from app.payload_builder import generate_negative_payload
-from app.nlp_summary import generate_test_summary  # Updated import
-from app.descriptions import generate_test_case_summary
+from app.nlp_summary import generate_test_summary  # Import the correct summary function
 
 class NegativeTestGenerator:
     def __init__(self, swagger_spec, use_premium_nlp=False, use_nlp_summary=False, nlp_engine="basic"):

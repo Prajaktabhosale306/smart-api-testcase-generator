@@ -6,23 +6,18 @@ import io
 def generate_csv(test_cases):
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Path", "Method", "Summary", "Parameters", "Assertions", "Expected Status Codes"])
+    writer.writerow(["Path", "Operation", "Summary", "Assertions"])
 
     for case in test_cases:
-        parameters = ", ".join([f"{p['name']}({p['in']})" for p in case.get("parameters", [])]) if case.get("parameters") else "N/A"
-        assertions = ", ".join([a["type"] for a in case.get("assertions", [])]) if case.get("assertions") else "N/A"
-        status_codes = ", ".join([str(code) for code in case.get("responses", {}).keys()]) if case.get("responses") else "N/A"
+        path = case.get("path", "")
+        operation = case.get("operation", "")
+        summary = case.get("summary", "")
+        assertions = ", ".join(
+            a.get("type", "") + "=" + str(a.get("expected", ""))
+            for a in case.get("assertions", [])
+        )
+        writer.writerow([path, operation, summary, assertions])
 
-        writer.writerow([
-            case["path"],
-            case["operation"],
-            case.get("summary", ""),
-            parameters,
-            assertions,
-            status_codes
-        ])
-
-    output.seek(0)
     return output.getvalue()
 
 # Export to Postman Collection (returns JSON string)

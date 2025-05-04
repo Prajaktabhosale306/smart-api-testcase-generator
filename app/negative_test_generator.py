@@ -44,7 +44,7 @@ class NegativeTestGenerator:
         if self.use_nlp_summary:
             test_case["summary"] = generate_test_summary(base_summary, path, operation, engine=self.nlp_engine, premium=self.use_premium_nlp)
         else:
-            test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
+            test_case["summary"] = generate_test_summary(base_summary, path, operation, engine="basic")  # Default basic summary if no NLP summary
 
         # Assertions (like status code 400, expected error message, etc.)
         test_case["assertions"] = build_negative_assertions(op_data)

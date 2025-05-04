@@ -1,12 +1,15 @@
-import os
 import sys
+import os
 import streamlit as st
 import json
 import requests
 import csv
 
-# Allow importing from app/ folder
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
+# Add the app/ directory to the Python path
+APP_DIR = os.path.join(os.path.dirname(__file__), "app")
+if APP_DIR not in sys.path:
+    sys.path.append(APP_DIR)
+
 from test_generator import TestGenerator
 from negative_test_generator import NegativeTestGenerator
 from exporter import generate_csv, generate_postman_collection

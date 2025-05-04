@@ -1,23 +1,38 @@
-def generate_test_case_summary(test_case, is_negative=False):
-    # Check if 'path' and 'operation' are available
-    if not test_case.get("path") or not test_case.get("operation"):
-        raise ValueError("Missing required keys in the test_case dictionary: 'path' or 'operation'.")
+# app/nlp_summary.py
 
-    # Generate summary based on whether it's a positive or negative test
-    if is_negative:
-        return f"Negative test case for {test_case['operation']} {test_case['path']}"
+def generate_test_summary(summary, path, operation, summary_type="basic"):
+    """
+    Generate a test case summary based on the selected type.
+
+    :param summary: A basic description of the API.
+    :param path: The path of the API endpoint.
+    :param operation: The HTTP method (GET, POST, etc.).
+    :param summary_type: One of "basic", "spacy", or "chatgpt".
+    :return: A string with the generated summary.
+    """
+    if summary_type == "chatgpt":
+        return generate_summary_chatgpt(summary, path, operation)
+    elif summary_type == "spacy":
+        return generate_summary_spacy(summary, path, operation)
     else:
-        return f"Positive test case for {test_case['operation']} {test_case['path']}"
+        return generate_basic_summary(summary, path, operation)
 
-# 🟢 Premium (ChatGPT)
+
+def generate_basic_summary(summary, path, operation):
+    if not path or not operation:
+        raise ValueError("Missing 'path' or 'operation'.")
+    if "negative" in summary.lower():
+        return f"Negative test case for {operation.upper()} {path}"
+    else:
+        return f"Positive test case for {operation.upper()} {path}"
+
+
 def generate_summary_chatgpt(summary, path, operation):
     try:
         import openai
         import os
 
-        # Assumes you set OPENAI_API_KEY as an environment variable
         openai.api_key = os.getenv("OPENAI_API_KEY")
-
         prompt = f"Generate a user-friendly test summary for this API call:\nMethod: {operation.upper()}\nPath: {path}\nDescription: {summary}\n"
 
         response = openai.ChatCompletion.create(
@@ -30,7 +45,7 @@ def generate_summary_chatgpt(summary, path, operation):
     except Exception as e:
         return f"[ChatGPT fallback] {summary}"
 
-# 🆓 Free (spaCy)
+
 def generate_summary_spacy(summary, path, operation):
     try:
         import spacy

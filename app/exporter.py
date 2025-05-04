@@ -1,6 +1,5 @@
 import json
 import csv
-import io
 
 # Export to JSON
 def export_to_json(test_cases, filename="test_cases.json"):

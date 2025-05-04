@@ -1,8 +1,13 @@
-def generate_test_summary(summary, path, operation, premium=False):
-    if premium:
-        return generate_summary_chatgpt(summary, path, operation)
+def generate_test_case_summary(test_case, is_negative=False):
+    # Check if 'path' and 'operation' are available
+    if not test_case.get("path") or not test_case.get("operation"):
+        raise ValueError("Missing required keys in the test_case dictionary: 'path' or 'operation'.")
+
+    # Generate summary based on whether it's a positive or negative test
+    if is_negative:
+        return f"Negative test case for {test_case['operation']} {test_case['path']}"
     else:
-        return generate_summary_spacy(summary, path, operation)
+        return f"Positive test case for {test_case['operation']} {test_case['path']}"
 
 # 🟢 Premium (ChatGPT)
 def generate_summary_chatgpt(summary, path, operation):

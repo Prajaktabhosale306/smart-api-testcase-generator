@@ -119,7 +119,6 @@ def main():
             if generate_negative:
                 neg = negative_generator.generate_negative_tests()
                 st.markdown("### ❌ Negative Test Cases")
-                st.success("negative test case completeed")
                 st.json(neg)
                 test_cases.extend(neg)
 

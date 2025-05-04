@@ -3,7 +3,6 @@ import os
 import streamlit as st
 import json
 import requests
-import csv
 
 # Add the app/ directory to the Python path
 APP_DIR = os.path.join(os.path.dirname(__file__), "app")
@@ -104,10 +103,11 @@ def main():
                 st.code(result)
                 test_cases.append({
                     "path": "/nlp/generated",
-                    "method": "POST",
-                    "description": result,
-                    "positive_assertions": ["pm.response.to.have.status(200)"],
-                    "negative_assertions": []
+                    "operation": "post",
+                    "summary": nl_description,
+                    "parameters": [],
+                    "assertions": [{"type": "status_code", "expected": 200}],
+                    "responses": {"200": {"description": "OK"}}
                 })
 
             if generate_positive:
@@ -124,9 +124,9 @@ def main():
 
             if test_cases:
                 st.subheader("📥 Export Test Cases")
-                st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json")
-                st.download_button("Download CSV", generate_csv(test_cases), "test_cases.csv")
-                st.download_button("Download Postman", generate_postman_collection(test_cases), "postman_collection.json")
+                st.download_button("Download JSON", json.dumps(test_cases, indent=2), "test_cases.json", mime="application/json")
+                st.download_button("Download CSV", generate_csv(test_cases), "test_cases.csv", mime="text/csv")
+                st.download_button("Download Postman", generate_postman_collection(test_cases), "postman_collection.json", mime="application/json")
             else:
                 st.info("No test cases generated.")
 

@@ -118,6 +118,7 @@ def main():
 
             if generate_negative:
                 neg = negative_generator.generate_negative_tests()
+                st.title("Smart API Test Case Generator 🚀")
                 st.markdown("### ❌ Negative Test Cases")
                 st.json(neg)
                 test_cases.extend(neg)

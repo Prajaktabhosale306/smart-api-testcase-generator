@@ -8,7 +8,6 @@ class NegativeTestGenerator:
         self.use_premium_nlp = use_premium_nlp
         self.use_nlp_summary = use_nlp_summary
         self.nlp_engine = nlp_engine  # Keep track of which NLP engine to use
-        print("Negative test case generation loaded successfuly:")
 
     def generate_negative_tests(self):
         negative_tests = []

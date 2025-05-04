@@ -20,27 +20,35 @@ class NegativeTestGenerator:
 
         return negative_tests
 
-    def create_negative_test_case(self, path, operation, op_data):
-        test_case = {
-            "path": path,
-            "operation": operation,
-            "parameters": op_data.get("parameters", []),
-            "responses": op_data.get("responses", {})
-        }
+   def create_negative_test_case(self, path, operation, op_data):
+    # Ensure path and operation are valid before proceeding
+    if not path or not operation:
+        raise ValueError(f"Missing required 'path' or 'operation' for the API endpoint: {path} {operation}")
+    
+    test_case = {
+        "path": path,
+        "operation": operation,
+        "parameters": op_data.get("parameters", []),
+        "responses": op_data.get("responses", {})
+    }
 
-        # Generate invalid/missing/malformed payload
-        test_case["request_payload"] = generate_negative_payload(op_data)
+    # Log the test_case to ensure it has the correct structure
+    print("Generated test_case:", test_case)
 
-        # Summary (NLP or rule-based)
-        base_summary = op_data.get("summary", "")
-        if self.use_nlp_summary:
-            # Use the new `generate_test_summary` for NLP-based summary
-            test_case["summary"] = generate_test_summary(f"Negative test for {base_summary}", path, operation, premium=self.use_premium_nlp)
-        else:
-            # Fallback to rule-based summary
-            test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
+    # Generate invalid/missing/malformed payload
+    test_case["request_payload"] = generate_negative_payload(op_data)
 
-        # Assertions (like status code 400, expected error message, etc.)
-        test_case["assertions"] = build_negative_assertions(op_data)
+    # Summary (NLP or rule-based)
+    base_summary = op_data.get("summary", "")
+    if self.use_nlp_summary:
+        test_case["summary"] = generate_test_summary(f"Negative test for {base_summary}", path, operation, premium=self.use_premium_nlp)
+    else:
+        # Validate that the generate_test_case_summary function can handle the test_case format
+        if not test_case.get("path") or not test_case.get("operation"):
+            raise ValueError("Invalid test_case structure, 'path' or 'operation' is missing.")
+        test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
 
-        return test_case
+    # Assertions (like status code 400, expected error message, etc.)
+    test_case["assertions"] = build_negative_assertions(op_data)
+
+    return test_case

@@ -1,11 +1,15 @@
-import io
+import os
+import sys
 import streamlit as st
 import json
 import requests
 import csv
-from app.test_generator import TestGenerator
-from app.negative_test_generator import NegativeTestGenerator
-from app.exporter import generate_csv, generate_postman_collection
+
+# Allow importing from app/ folder
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
+from test_generator import TestGenerator
+from negative_test_generator import NegativeTestGenerator
+from exporter import generate_csv, generate_postman_collection
 
 # Load spaCy model (Free mode)
 def load_spacy_model():

@@ -1,13 +1,14 @@
 from app.assertion_logic import build_negative_assertions
 from app.payload_builder import generate_negative_payload
-from app.nlp_summary import generate_test_summary
+from app.nlp_summary import generate_test_summary  # Updated import
 from app.descriptions import generate_test_case_summary
 
 class NegativeTestGenerator:
-    def __init__(self, swagger_spec, use_premium_nlp=False, use_nlp_summary=False):
+    def __init__(self, swagger_spec, use_premium_nlp=False, use_nlp_summary=False, nlp_engine="basic"):
         self.swagger_spec = swagger_spec
         self.use_premium_nlp = use_premium_nlp
         self.use_nlp_summary = use_nlp_summary
+        self.nlp_engine = nlp_engine  # Keep track of which NLP engine to use
 
     def generate_negative_tests(self):
         negative_tests = []
@@ -42,9 +43,7 @@ class NegativeTestGenerator:
         # Handle NLP summary generation
         base_summary = op_data.get("summary", "")
         if self.use_nlp_summary:
-            test_case["summary"] = generate_test_summary(
-                base_summary, path, operation, is_negative=True, engine="chatgpt" if self.use_premium_nlp else "spacy"
-            )
+            test_case["summary"] = generate_test_summary(base_summary, path, operation, engine=self.nlp_engine, premium=self.use_premium_nlp)
         else:
             test_case["summary"] = generate_test_case_summary(test_case, is_negative=True)
 

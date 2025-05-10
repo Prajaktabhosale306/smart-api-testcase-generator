@@ -45,24 +45,52 @@ def generate_test_case_spacy(description):
         return "spaCy model unavailable."
     doc = nlp(description)
     entities = [f"{ent.label_}: {ent.text}" for ent in doc.ents]
-    return f"Detected entities \u2794 {', '.join(entities) if entities else 'None found'}"
+    return f"Detected entities ➤ {', '.join(entities) if entities else 'None found'}"
 
-def parse_project_description(desc):
-    # Placeholder: You can improve this with better NLP parsing
-    lines = desc.split(".")
-    summary = {"components": [], "roles": [], "actions": []}
+# Parse natural language project description into structured config (simplified)
+def parse_project_description(text):
+    project_config = {
+        "project_name": "My Project",
+        "components": [],
+        "user_roles": []
+    }
+    lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
     for line in lines:
         if "component" in line.lower():
-            summary["components"].append(line.strip())
+            comp = line.split(":")[-1].strip()
+            project_config["components"].append({"name": comp, "integrates_with": [], "responsibilities": []})
         elif "role" in line.lower():
-            summary["roles"].append(line.strip())
-        elif "can " in line.lower():
-            summary["actions"].append(line.strip())
-    return summary
+            role = line.split(":")[-1].strip()
+            project_config["user_roles"].append({"role": role, "permissions": []})
+    return project_config
 
 # Streamlit App
 def main():
     st.title("Smart API Test Case Generator")
+
+    st.sidebar.header("💾 Project Configuration")
+    config_input = st.sidebar.text_area("Enter project config in natural language")
+    config = {}
+
+    if st.sidebar.button("Parse Project Config"):
+        config = parse_project_description(config_input)
+        st.sidebar.success("Configuration parsed!")
+
+    if config:
+        st.sidebar.subheader("Parsed Configuration")
+        st.sidebar.json(config)
+
+        if st.sidebar.button("Download Config JSON"):
+            st.download_button("Download JSON", json.dumps(config, indent=2), "project_config.json", mime="application/json")
+
+    load_config_file = st.sidebar.file_uploader("Or Upload Existing Project Config", type=["json"])
+    if load_config_file:
+        try:
+            config = json.load(load_config_file)
+            st.sidebar.success("Configuration loaded!")
+            st.sidebar.json(config)
+        except Exception as e:
+            st.sidebar.error(f"Invalid JSON file: {e}")
 
     input_method = st.radio("Swagger/OpenAPI input via:", ("Upload JSON File", "Enter URL"))
     swagger_data = None
@@ -87,31 +115,6 @@ def main():
                 st.error(f"Fetch failed: {e}")
                 return
 
-    st.markdown("---")
-    st.markdown("### 🧠 Project Configuration in Natural Language")
-    project_desc = st.text_area("Describe your project, roles, components, and expected behaviors:")
-    show_config = st.button("Parse Project Description")
-
-    if show_config and project_desc:
-        config_summary = parse_project_description(project_desc)
-        st.subheader("🔍 Parsed Project Summary")
-        st.json(config_summary)
-
-    st.markdown("---")
-    st.markdown("### 🧠 NLP-based Test Case Summary")
-    nl_description = st.text_area("Describe a test case (optional)")
-    nlp_mode = st.radio("Choose NLP Engine", ["Free (spaCy)", "Premium (ChatGPT/GPT-2)"])
-
-    if st.button("Generate NLP Summary") and nl_description:
-        st.markdown("#### ✨ NLP Summary")
-        result = (
-            generate_test_case_gpt(nl_description)
-            if nlp_mode == "Premium (ChatGPT/GPT-2)"
-            else generate_test_case_spacy(nl_description)
-        )
-        st.code(result)
-
-    st.markdown("---")
     if swagger_data:
         try:
             generator = TestGenerator(swagger_data)
@@ -124,8 +127,30 @@ def main():
         generate_positive = st.checkbox("Generate Positive Test Cases", value=True)
         generate_negative = st.checkbox("Generate Negative Test Cases")
 
-        if st.button("Generate Test Cases"):
+        st.markdown("### 🧠 NLP-based Test Case Summary")
+        nl_description = st.text_area("Describe a test case (optional)")
+        nlp_mode = st.radio("Choose NLP Engine", ["Free (spaCy)", "Premium (ChatGPT/GPT-2)"])
+
+        if st.button("Generate"):
             test_cases = []
+
+            if nl_description:
+                st.markdown("#### ✨ NLP Summary")
+                result = (
+                    generate_test_case_gpt(nl_description)
+                    if nlp_mode == "Premium (ChatGPT/GPT-2)"
+                    else generate_test_case_spacy(nl_description)
+                )
+                st.code(result)
+                test_cases.append({
+                    "path": "/nlp/generated",
+                    "operation": "post",
+                    "summary": nl_description,
+                    "parameters": [],
+                    "assertions": [{"type": "status_code", "expected": 200}],
+                    "responses": {"200": {"description": "OK"}}
+                })
+
             if generate_positive:
                 pos = generator.generate_test_cases()
                 st.markdown("### ✅ Positive Test Cases")

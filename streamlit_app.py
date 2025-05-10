@@ -62,7 +62,7 @@ def parse_project_description(desc):
 
 # Streamlit App
 def main():
-    st.title("Smart API Test Case Generator \ud83d\ude80")
+    st.title("Smart API Test Case Generator")
 
     input_method = st.radio("Swagger/OpenAPI input via:", ("Upload JSON File", "Enter URL"))
     swagger_data = None

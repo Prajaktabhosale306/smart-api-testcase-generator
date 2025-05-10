@@ -6,9 +6,8 @@ from app.assertion_logic import build_positive_assertions, build_negative_assert
 from app.utils import sanitize_test_case_name
 from app.nlp_summary import generate_test_summary
 
-
 class TestGenerator:
-    def __init__(self, spec_input: Any):
+    def __init__(self, spec_input: Any, use_nlp_summary: bool = False, use_premium_nlp: bool = False):
         """
         Initializes the TestGenerator with the provided OpenAPI spec input.
         Accepts dict, URL, or file path.
@@ -16,6 +15,8 @@ class TestGenerator:
         self.swagger_loader = SwaggerLoader(spec_input)
         self.spec = self.swagger_loader.spec
         self.paths = self.swagger_loader.get_paths()
+        self.use_nlp_summary = use_nlp_summary
+        self.use_premium_nlp = use_premium_nlp
 
     def generate_test_cases(self) -> List[Dict[str, Any]]:
         test_cases = []
@@ -54,13 +55,16 @@ class TestGenerator:
                 positive_asserts = build_positive_assertions(response_schema, self.spec)
                 negative_asserts = build_negative_assertions(operation)
 
-                # NLP-based test case summary
-                test_name = generate_test_summary(
-                    summary=operation.get("summary", f"{method.upper()} {path}"),
-                    path=path,
-                    operation=method,
-                    premium=False  # Set to True for ChatGPT-based summary
-                )
+                # NLP-based test case summary (if enabled)
+                if self.use_nlp_summary:
+                    test_name = generate_test_summary(
+                        summary=operation.get("summary", f"{method.upper()} {path}"),
+                        path=path,
+                        operation=method,
+                        premium=self.use_premium_nlp
+                    )
+                else:
+                    test_name = f"{method.upper()} {path}"
 
                 # Final structured test case
                 test_case = {

@@ -45,11 +45,24 @@ def generate_test_case_spacy(description):
         return "spaCy model unavailable."
     doc = nlp(description)
     entities = [f"{ent.label_}: {ent.text}" for ent in doc.ents]
-    return f"Detected entities ➤ {', '.join(entities) if entities else 'None found'}"
+    return f"Detected entities \u2794 {', '.join(entities) if entities else 'None found'}"
+
+def parse_project_description(desc):
+    # Placeholder: You can improve this with better NLP parsing
+    lines = desc.split(".")
+    summary = {"components": [], "roles": [], "actions": []}
+    for line in lines:
+        if "component" in line.lower():
+            summary["components"].append(line.strip())
+        elif "role" in line.lower():
+            summary["roles"].append(line.strip())
+        elif "can " in line.lower():
+            summary["actions"].append(line.strip())
+    return summary
 
 # Streamlit App
 def main():
-    st.title("Smart API Test Case Generator 🚀")
+    st.title("Smart API Test Case Generator \ud83d\ude80")
 
     input_method = st.radio("Swagger/OpenAPI input via:", ("Upload JSON File", "Enter URL"))
     swagger_data = None
@@ -74,6 +87,31 @@ def main():
                 st.error(f"Fetch failed: {e}")
                 return
 
+    st.markdown("---")
+    st.markdown("### 🧠 Project Configuration in Natural Language")
+    project_desc = st.text_area("Describe your project, roles, components, and expected behaviors:")
+    show_config = st.button("Parse Project Description")
+
+    if show_config and project_desc:
+        config_summary = parse_project_description(project_desc)
+        st.subheader("🔍 Parsed Project Summary")
+        st.json(config_summary)
+
+    st.markdown("---")
+    st.markdown("### 🧠 NLP-based Test Case Summary")
+    nl_description = st.text_area("Describe a test case (optional)")
+    nlp_mode = st.radio("Choose NLP Engine", ["Free (spaCy)", "Premium (ChatGPT/GPT-2)"])
+
+    if st.button("Generate NLP Summary") and nl_description:
+        st.markdown("#### ✨ NLP Summary")
+        result = (
+            generate_test_case_gpt(nl_description)
+            if nlp_mode == "Premium (ChatGPT/GPT-2)"
+            else generate_test_case_spacy(nl_description)
+        )
+        st.code(result)
+
+    st.markdown("---")
     if swagger_data:
         try:
             generator = TestGenerator(swagger_data)
@@ -86,30 +124,8 @@ def main():
         generate_positive = st.checkbox("Generate Positive Test Cases", value=True)
         generate_negative = st.checkbox("Generate Negative Test Cases")
 
-        st.markdown("### 🧠 NLP-based Test Case Summary")
-        nl_description = st.text_area("Describe a test case (optional)")
-        nlp_mode = st.radio("Choose NLP Engine", ["Free (spaCy)", "Premium (ChatGPT/GPT-2)"])
-
-        if st.button("Generate"):
+        if st.button("Generate Test Cases"):
             test_cases = []
-
-            if nl_description:
-                st.markdown("#### ✨ NLP Summary")
-                result = (
-                    generate_test_case_gpt(nl_description)
-                    if nlp_mode == "Premium (ChatGPT/GPT-2)"
-                    else generate_test_case_spacy(nl_description)
-                )
-                st.code(result)
-                test_cases.append({
-                    "path": "/nlp/generated",
-                    "operation": "post",
-                    "summary": nl_description,
-                    "parameters": [],
-                    "assertions": [{"type": "status_code", "expected": 200}],
-                    "responses": {"200": {"description": "OK"}}
-                })
-
             if generate_positive:
                 pos = generator.generate_test_cases()
                 st.markdown("### ✅ Positive Test Cases")
@@ -118,7 +134,6 @@ def main():
 
             if generate_negative:
                 neg = negative_generator.generate_negative_tests()
-                st.title("Smart API Test Case Generator 🚀")
                 st.markdown("### ❌ Negative Test Cases")
                 st.json(neg)
                 test_cases.extend(neg)
